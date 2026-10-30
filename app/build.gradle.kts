@@ -11,6 +11,9 @@
  *   - org.bouncycastle:bcpkix-jdk18on      — isolated, uncrippled BouncyCastle (PKCS12)
  *   - com.squareup.okhttp3:okhttp          — GitHub zipball / REST downloads
  */
+import java.io.FileOutputStream
+import java.net.URI
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -193,12 +196,12 @@ tasks.register("downloadAapt2Runtime") {
             "download.tar.xz"
         ).also { it.parentFile.mkdirs() }
         logger.lifecycle("Downloading arm64 aapt2 from $url …")
-        val connection = java.net.URI(url).toURL().openConnection()
+        val connection = URI(url).toURL().openConnection()
         connection.connectTimeout = 30_000
         connection.readTimeout = 300_000
         connection.setRequestProperty("User-Agent", "UniversalApkFactory/2.0")
         connection.getInputStream().use { input ->
-            java.io.FileOutputStream(archive).use { output -> input.copyTo(output) }
+            FileOutputStream(archive).use { output -> input.copyTo(output) }
         }
 
         // Minimal tar reader: extract only the entry named "aapt2".
@@ -219,7 +222,7 @@ tasks.register("downloadAapt2Runtime") {
                 val type = header[156]
                 if (type == '0'.code.toByte() && name.substringAfterLast('/') == "aapt2") {
                     aapt2Output.parentFile.mkdirs()
-                    java.io.FileOutputStream(aapt2Output).use { output ->
+                    FileOutputStream(aapt2Output).use { output ->
                         var remaining = size
                         val buffer = ByteArray(64 * 1024)
                         while (remaining > 0) {

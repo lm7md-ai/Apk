@@ -6,6 +6,9 @@
  * provisioned on demand into assets/python_runtime/ by the
  * `downloadPythonRuntime` task below.
  */
+import java.net.URI
+import java.security.MessageDigest
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -106,7 +109,7 @@ tasks.register("downloadPythonRuntime") {
         val archiveFile = File(cacheDir, "runtime-archive")
 
         logger.lifecycle("Downloading Python runtime from $url …")
-        val connection = java.net.URI(url).toURL().openConnection() as java.net.URLConnection
+        val connection = URI(url).toURL().openConnection()
         connection.connectTimeout = 30_000
         connection.readTimeout = 120_000
         connection.setRequestProperty("User-Agent", "UniversalApkFactory/2.0")
@@ -118,7 +121,7 @@ tasks.register("downloadPythonRuntime") {
 
         val expectedSha256 = pythonRuntimeSha256Property()
         if (expectedSha256 != null) {
-            val digest = java.security.MessageDigest.getInstance("SHA-256")
+            val digest = MessageDigest.getInstance("SHA-256")
             archiveFile.inputStream().use { input ->
                 val buffer = ByteArray(64 * 1024)
                 while (true) {
