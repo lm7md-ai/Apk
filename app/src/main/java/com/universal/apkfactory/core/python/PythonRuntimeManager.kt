@@ -338,7 +338,7 @@ class PythonRuntimeManager(
                 val rawName = (pendingLongName ?: parseHeaderName(header))
                 pendingLongName = null
                 val size = parseHeaderSize(header)
-                val typeFlag = header[156]
+                val typeFlag = header[156].toInt() and 0xFF
                 val linkName = cString(header, 157, 100)
 
                 when (typeFlag) {
@@ -417,7 +417,7 @@ class PythonRuntimeManager(
                     if (!readFully(stream, header)) break
                     if (header.all { it == 0.toByte() }) break
                     val size = parseHeaderSize(header)
-                    val typeFlag = header[156]
+                    val typeFlag = header[156].toInt() and 0xFF
                     if (typeFlag == 'L'.code) {
                         skipData(stream, size)
                         skipPadding(stream, size)
@@ -439,8 +439,15 @@ class PythonRuntimeManager(
     /* ---------------------------------------------------------------------- */
 
     private fun parseHeaderSize(header: ByteArray): Long {
-        val sizeField = cString(header, 124, 12).trim('\0', ' ')
+        val sizeField = cString(header, 124, 12).trim(' ')
         return if (sizeField.isEmpty()) 0L else sizeField.toLong(8)
+    }
+
+    /** Parses the tar name field (0..100) plus the ustar prefix (345..500). */
+    private fun parseHeaderName(header: ByteArray): String {
+        val name = cString(header, 0, 100)
+        val prefix = cString(header, 345, 155)
+        return if (prefix.isEmpty()) name else "$prefix/$name"
     }
 
     private fun cString(bytes: ByteArray, offset: Int, length: Int): String {
