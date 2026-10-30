@@ -1,8 +1,10 @@
 name: Build APK
 
-# Manual dispatch only (the retrieval step commits build output back to this
-# branch, so auto-triggering on push would loop).
+# Push-triggered on this branch. The retrieval step commits build output
+# back via the github-actions bot, whose pushes do NOT re-trigger workflows.
 on:
+  push:
+    branches: [arena/5e3c22cc-apk]
   workflow_dispatch:
 
 permissions:
