@@ -228,6 +228,7 @@ class GitHubRepoDownloader(
         throw GitHubDownloadException(
             "Repository ${resolved.slug} not reachable for ref " +
                 "'${resolved.ref}' (checked branch and tag endpoints).",
+            0,
             lastError
         )
     }

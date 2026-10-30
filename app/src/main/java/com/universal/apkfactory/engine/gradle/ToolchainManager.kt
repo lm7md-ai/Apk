@@ -71,7 +71,7 @@ class ToolchainManager(
         const val SDK_URL =
             "https://github.com/AndroidIDEOfficial/androidide-tools/" +
                 "releases/download/sdk/android-sdk.tar.xz"
-        const val SDK_SHA256_URL: String? = null
+        val SDK_SHA256_URL: String? = null
     }
 
     sealed interface Event {

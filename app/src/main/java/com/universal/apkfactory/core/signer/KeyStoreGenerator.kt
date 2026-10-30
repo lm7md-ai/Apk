@@ -333,8 +333,8 @@ class KeyStoreGenerator(private val context: Context) {
             } else {
                 null
             }
-            val alias: String
-            val subject: String
+            var alias = "?"
+            var subject = "password protected (imported)"
             if (password != null) {
                 try {
                     val identity = loadIdentity(file, packageName, password)
@@ -346,9 +346,6 @@ class KeyStoreGenerator(private val context: Context) {
                     alias = "?"
                     subject = "unreadable: ${error.message?.take(48)}"
                 }
-            } else {
-                alias = "?"
-                subject = "password protected (imported)"
             }
             records.add(
                 KeyStoreRecord(

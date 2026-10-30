@@ -439,10 +439,10 @@ class FastApkPatcherAndEditor(private val context: Context) {
     )
 
     /** Base icon sizes (dp) on the launcher grid. */
-    private const val LEGACY_ICON_DP = 48
-    private const val ADAPTIVE_LAYER_DP = 108
+    private val LEGACY_ICON_DP = 48
+    private val ADAPTIVE_LAYER_DP = 108
     /** Visible safe-zone ratio of an adaptive icon (66/108). */
-    private const val ADAPTIVE_SAFE_ZONE = 66f / 108f
+    private val ADAPTIVE_SAFE_ZONE = 66f / 108f
 
     private val iconEntryPattern = Regex(
         "^res/(?:mipmap|drawable)-([a-z]+)(?:-v\\d+)?/" +

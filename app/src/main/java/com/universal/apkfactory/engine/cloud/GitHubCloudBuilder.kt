@@ -22,6 +22,7 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -59,7 +60,7 @@ import java.util.concurrent.TimeUnit
  * equivalent permissions, but cannot be detected via `X-OAuth-Scopes`).
  */
 class GitHubCloudBuilder(
-    context: Context,
+    private val context: Context,
     private val httpClient: OkHttpClient,
 ) {
 

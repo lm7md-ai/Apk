@@ -199,13 +199,15 @@ class ApkAlignerAndSigner(private val context: Context) {
         )
         try {
             val signer = ApkSigner.Builder(listOf(signerConfig))
+                .setInputApk(input)
+                .setOutputApk(output)
                 .setV1SigningEnabled(true)
                 .setV2SigningEnabled(true)
                 .setV3SigningEnabled(true)
                 .setMinSdkVersion(MIN_SDK)
                 .setCreatedBy("Universal APK Factory 2.0")
                 .build()
-            signer.sign(input, output)
+            signer.sign()
         } catch (error: Exception) {
             output.delete()
             throw SigningFailedException(
@@ -263,7 +265,7 @@ class ApkAlignerAndSigner(private val context: Context) {
                         session.fsync(output)
                     }
                 }
-                session.commit(statusIntent(sessionId))
+                session.commit(statusIntent(sessionId).intentSender)
                 onLog("PackageInstaller session $sessionId committed — awaiting confirmation.")
                 InstallResult.SessionCommitted(sessionId, apkFile)
             } finally {
