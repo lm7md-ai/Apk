@@ -68,5 +68,5 @@ tasks.register<Copy>("packageWebviewShell") {
         include("*.apk")
     }
     into(rootProject.file("app/src/main/assets/shells"))
-    rename { _ -> "webview_modern_shell.apk" }
+    rename(org.gradle.api.Transformer<String, String> { _ -> "webview_modern_shell.apk" })
 }

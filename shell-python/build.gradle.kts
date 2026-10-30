@@ -6,6 +6,9 @@
  * provisioned on demand into assets/python_runtime/ by the
  * `downloadPythonRuntime` task below.
  */
+import org.gradle.api.Action
+import org.gradle.api.file.FileCopyDetails
+import org.gradle.api.file.RelativePath
 import java.net.URI
 import java.security.MessageDigest
 
@@ -160,24 +163,27 @@ tasks.register("downloadPythonRuntime") {
         project.copy {
             from(tree)
             into(targetDir)
-            // Strip a single redundant top-level directory, mirroring the
-            // ZipRootNormalizer rule of the factory itself.
-            eachFile { file ->
-                val segments = file.relativePath.segments
-                if (segments.size > 1 && segments[0].let { top ->
-                        listOf(
-                            "app", "src", "gradle", "build", "dist", "out",
-                            "assets", "res", "www", "public", "lib", "bin"
-                        ).none { it == top.lowercase() }
-                    }
-                ) {
-                    file.relativePath = org.gradle.api.file.RelativePath(
-                        true,
-                        *segments.drop(1).toTypedArray()
-                    )
-                }
-            }
             includeEmptyDirs = false
+            // Strip a single redundant top-level directory, mirroring the
+            // ZipRootNormalizer rule of the factory itself. The explicit SAM
+            // constructor pins the overload to eachFile(Action) — the plain
+            // trailing lambda resolves ambiguously against the Groovy
+            // eachFile(Closure) overload in this script scope.
+            eachFile(
+                Action<FileCopyDetails> { file ->
+                    val segments = file.relativePath.segments
+                    val knownTopDirs = setOf(
+                        "app", "src", "gradle", "build", "dist", "out",
+                        "assets", "res", "www", "public", "lib", "bin"
+                    )
+                    if (segments.size > 1 && segments[0].lowercase() !in knownTopDirs) {
+                        file.relativePath = RelativePath(
+                            true,
+                            *segments.drop(1).toTypedArray()
+                        )
+                    }
+                }
+            )
         }
 
         // Persist the interpreter layout the shell expects.
@@ -213,5 +219,5 @@ tasks.register<Copy>("packagePythonShell") {
         include("*.apk")
     }
     into(rootProject.file("app/src/main/assets/shells"))
-    rename { _ -> "python_runtime_shell.apk" }
+    rename(org.gradle.api.Transformer<String, String> { _ -> "python_runtime_shell.apk" })
 }
