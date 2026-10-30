@@ -29,6 +29,7 @@ import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material.icons.filled.InstallMobile
 import androidx.compose.material.icons.filled.Memory
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -57,6 +58,7 @@ import com.universal.apkfactory.ui.components.TerminalLogViewer
  * cards, the Live Terminal Log Viewer and the result panel (install /
  * share / new build).
  */
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
 fun BuildScreen(
     state: MainViewModel.UiState,

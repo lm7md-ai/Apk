@@ -28,6 +28,7 @@ import androidx.compose.material.icons.filled.CreateNewFolder
 import androidx.compose.material.icons.filled.FolderZip
 import androidx.compose.material.icons.filled.Key
 import androidx.compose.material.icons.filled.Memory
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -59,6 +60,7 @@ import com.universal.apkfactory.engine.gradle.ToolchainManager
  * a GitHub URL (or share one from any app), pre-provision the on-device
  * compiler toolchain, or manage keystores and the cloud PAT.
  */
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     state: MainViewModel.UiState,

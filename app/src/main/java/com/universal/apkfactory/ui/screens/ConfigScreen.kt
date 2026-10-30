@@ -28,6 +28,7 @@ import androidx.compose.material.icons.filled.Image
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.FilterChip
@@ -65,7 +66,7 @@ import com.universal.apkfactory.core.model.ProjectBuildConfig
  * launcher icon. The bottom section adapts to the detected build mode and
  * offers the Instant / Cloud / On-device engine choice.
  */
-@OptIn(ExperimentalLayoutApi::class)
+@OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun ConfigScreen(
     state: MainViewModel.UiState,

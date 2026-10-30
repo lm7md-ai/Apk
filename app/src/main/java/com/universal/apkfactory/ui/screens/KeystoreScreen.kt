@@ -27,6 +27,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CloudDone
 import androidx.compose.material.icons.filled.Key
 import androidx.compose.material.icons.filled.VpnKey
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ElevatedCard
@@ -61,6 +62,7 @@ import java.util.Locale
  *   and powers the cloud CI bridge. Classic tokens need the `repo`,
  *   `workflow` and `delete_repo` scopes.
  */
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
 fun KeystoreScreen(
     state: MainViewModel.UiState,
