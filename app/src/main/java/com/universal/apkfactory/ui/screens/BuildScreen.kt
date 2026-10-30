@@ -69,6 +69,8 @@ import com.universal.apkfactory.engine.gradle.NativeGradleService
 import com.universal.apkfactory.engine.gradle.ToolchainManager
 import com.universal.apkfactory.ui.components.FailureDiagnosisCard
 import com.universal.apkfactory.ui.components.TerminalLogViewer
+import com.universal.apkfactory.R
+import androidx.compose.ui.res.stringResource
 
 /**
  * Part 5 — the live build screen: phase banner, cloud/toolchain progress
@@ -112,10 +114,10 @@ fun BuildScreen(
         if (state.phase == MainViewModel.BuildPhase.FAILED) {
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 OutlinedButton(onClick = onBackToConfig) {
-                    Text("Adjust configuration")
+                    Text(stringResource(R.string.build_adjust))
                 }
                 OutlinedButton(onClick = onNewBuild) {
-                    Text("Start over")
+                    Text(stringResource(R.string.build_restart))
                 }
             }
             state.error?.let { message ->
@@ -162,13 +164,13 @@ private fun TerminalCard(lines: List<com.universal.apkfactory.core.model.BuildLo
                 modifier = Modifier.size(18.dp),
             )
             Text(
-                text = "Build log",
+                text = stringResource(R.string.build_log_title),
                 style = MaterialTheme.typography.titleSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Spacer(modifier = Modifier.weight(1f))
             Text(
-                text = "${lines.size} lines",
+                text = stringResource(R.string.build_log_lines, lines.size),
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -180,7 +182,7 @@ private fun TerminalCard(lines: List<com.universal.apkfactory.core.model.BuildLo
                     )
                     clipboard?.setPrimaryClip(
                         android.content.ClipData.newPlainText(
-                            "APK Factory build log",
+                            stringResource(R.string.clipboard_label_build_log),
                             lines.joinToString("\n") {
                                 "[%s] %s".format(it.level, it.message)
                             },
@@ -194,7 +196,7 @@ private fun TerminalCard(lines: List<com.universal.apkfactory.core.model.BuildLo
                     contentDescription = null,
                     modifier = Modifier.size(14.dp),
                 )
-                Text(if (copied) "  Copied" else "  Copy")
+                Text(if (copied) "  " + stringResource(R.string.action_copied) else "  " + stringResource(R.string.action_copy))
             }
         }
         TerminalLogViewer(lines = lines)
@@ -209,39 +211,39 @@ private fun TerminalCard(lines: List<com.universal.apkfactory.core.model.BuildLo
 private fun PhaseBanner(state: MainViewModel.UiState, onCancelNative: () -> Unit) {
     val (icon, title, running) = when (state.phase) {
         MainViewModel.BuildPhase.IDLE -> Triple(
-            Icons.Filled.Memory, "Ready", false
+            Icons.Filled.Memory, stringResource(R.string.phase_ready), false
         )
 
         MainViewModel.BuildPhase.INGESTING -> Triple(
-            Icons.Filled.Memory, "Importing project …", true
+            Icons.Filled.Memory, stringResource(R.string.phase_ingesting), true
         )
 
         MainViewModel.BuildPhase.DETECTING -> Triple(
-            Icons.Filled.Memory, "Detecting stack …", true
+            Icons.Filled.Memory, stringResource(R.string.phase_detecting), true
         )
 
         MainViewModel.BuildPhase.FAST_BUILDING -> Triple(
-            Icons.Filled.Memory, "Patching shell, aligning & signing …", true
+            Icons.Filled.Memory, stringResource(R.string.phase_fast), true
         )
 
         MainViewModel.BuildPhase.CLOUD_BUILDING -> Triple(
-            Icons.Filled.CloudQueue, "Building on GitHub Actions …", true
+            Icons.Filled.CloudQueue, stringResource(R.string.phase_cloud), true
         )
 
         MainViewModel.BuildPhase.NATIVE_BUILDING -> Triple(
-            Icons.Filled.Memory, "Compiling on device (Gradle) …", true
+            Icons.Filled.Memory, stringResource(R.string.phase_native), true
         )
 
         MainViewModel.BuildPhase.FINALIZING -> Triple(
-            Icons.Filled.Memory, "Sanitizing, aligning & signing …", true
+            Icons.Filled.Memory, stringResource(R.string.phase_finalizing), true
         )
 
         MainViewModel.BuildPhase.DONE -> Triple(
-            Icons.Filled.CheckCircle, "Build complete", false
+            Icons.Filled.CheckCircle, stringResource(R.string.phase_done), false
         )
 
         MainViewModel.BuildPhase.FAILED -> Triple(
-            Icons.Filled.ErrorOutline, "Build failed", false
+            Icons.Filled.ErrorOutline, stringResource(R.string.phase_failed), false
         )
     }
 
@@ -311,7 +313,7 @@ private fun PhaseBanner(state: MainViewModel.UiState, onCancelNative: () -> Unit
             if (state.phase == MainViewModel.BuildPhase.NATIVE_BUILDING) {
                 Spacer(modifier = Modifier.height(8.dp))
                 TextButton(onClick = onCancelNative) {
-                    Text("Stop build")
+                    Text(stringResource(R.string.build_stop))
                 }
             }
         }
@@ -356,7 +358,7 @@ private fun CloudProgressCard(progress: GitHubCloudBuilder.CloudProgress) {
             )
             progress.workflowStep?.let { step ->
                 Text(
-                    text = "Current step: $step",
+                    text = stringResource(R.string.cloud_current_step, step),
                     style = MaterialTheme.typography.bodySmall,
                     fontFamily = FontFamily.Monospace,
                 )
@@ -379,13 +381,14 @@ private fun CloudProgressCard(progress: GitHubCloudBuilder.CloudProgress) {
     }
 }
 
+@Composable
 private fun stageLabel(stage: GitHubCloudBuilder.CloudStage): String = when (stage) {
-    GitHubCloudBuilder.CloudStage.PREPARING -> "Preparing cloud build"
-    GitHubCloudBuilder.CloudStage.UPLOADING -> "Uploading project"
-    GitHubCloudBuilder.CloudStage.QUEUED -> "Waiting for a runner"
-    GitHubCloudBuilder.CloudStage.RUNNING -> "Compiling on GitHub"
-    GitHubCloudBuilder.CloudStage.ARTIFACT -> "Downloading artifact"
-    GitHubCloudBuilder.CloudStage.COMPLETE -> "Cloud build finished"
+    GitHubCloudBuilder.CloudStage.PREPARING -> stringResource(R.string.cloud_stage_preparing)
+    GitHubCloudBuilder.CloudStage.UPLOADING -> stringResource(R.string.cloud_stage_uploading)
+    GitHubCloudBuilder.CloudStage.QUEUED -> stringResource(R.string.cloud_stage_queued)
+    GitHubCloudBuilder.CloudStage.RUNNING -> stringResource(R.string.cloud_stage_running)
+    GitHubCloudBuilder.CloudStage.ARTIFACT -> stringResource(R.string.cloud_stage_artifact)
+    GitHubCloudBuilder.CloudStage.COMPLETE -> stringResource(R.string.cloud_stage_complete)
 }
 
 /* ---------------------------------------------------------------------- */
@@ -404,7 +407,7 @@ private fun ToolchainProgressCard(event: ToolchainManager.Event?) {
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
             Text(
-                text = "Toolchain provisioning",
+                text = stringResource(R.string.toolchain_provisioning),
                 style = MaterialTheme.typography.titleSmall,
             )
             if (download != null) {
@@ -419,9 +422,12 @@ private fun ToolchainProgressCard(event: ToolchainManager.Event?) {
                     modifier = Modifier.fillMaxWidth(),
                 )
                 Text(
-                    text = "Downloading ${download.component}: " +
-                        "${download.bytesDownloaded / 1024} / " +
-                        "${if (download.bytesTotal > 0) download.bytesTotal / 1024 else '?'} KiB",
+                    text = stringResource(
+                        R.string.toolchain_downloading,
+                        download.component,
+                        download.bytesDownloaded / 1024,
+                        if (download.bytesTotal > 0) download.bytesTotal / 1024 else 0,
+                    ),
                     style = MaterialTheme.typography.bodySmall,
                 )
             }
@@ -437,7 +443,7 @@ private fun ToolchainProgressCard(event: ToolchainManager.Event?) {
                     modifier = Modifier.fillMaxWidth(),
                 )
                 Text(
-                    text = "Extracting ${extract.component} …",
+                    text = stringResource(R.string.toolchain_extracting, extract.component),
                     style = MaterialTheme.typography.bodySmall,
                 )
             }
@@ -461,18 +467,18 @@ private fun NativeSummaryCard(state: MainViewModel.UiState) {
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
             Text(
-                text = "On-device Gradle",
+                text = stringResource(R.string.native_summary_title),
                 style = MaterialTheme.typography.titleSmall,
             )
             if (running != null) {
                 Text(
-                    text = "Tasks: ${running.tasks.joinToString(" ")}",
+                    text = stringResource(R.string.native_tasks, running.tasks.joinToString(" ")),
                     style = MaterialTheme.typography.bodySmall,
                     fontFamily = FontFamily.Monospace,
                 )
                 val seconds = (System.currentTimeMillis() - running.startedAtMillis) / 1000
                 Text(
-                    text = "Elapsed: ${seconds}s",
+                    text = stringResource(R.string.native_elapsed, seconds),
                     style = MaterialTheme.typography.bodySmall,
                 )
             }
@@ -525,8 +531,8 @@ private fun ResultPanel(apk: java.io.File, onInstall: () -> Unit, onShare: () ->
                         color = FactoryTheme.ext.onSuccessContainer,
                     )
                     Text(
-                        text = String.format(
-                            "%.1f MiB • signed (V1 + V2 + V3) • 4-byte aligned",
+                        text = stringResource(
+                            R.string.result_meta,
                             apk.length() / 1024.0 / 1024.0,
                         ),
                         style = MaterialTheme.typography.bodySmall,
@@ -548,7 +554,7 @@ private fun ResultPanel(apk: java.io.File, onInstall: () -> Unit, onShare: () ->
                         modifier = Modifier.size(18.dp),
                     )
                     Spacer(modifier = Modifier.width(6.dp))
-                    Text("Install")
+                    Text(stringResource(R.string.action_install))
                 }
                 OutlinedButton(
                     onClick = onShare,
@@ -560,7 +566,7 @@ private fun ResultPanel(apk: java.io.File, onInstall: () -> Unit, onShare: () ->
                         modifier = Modifier.size(18.dp),
                     )
                     Spacer(modifier = Modifier.width(6.dp))
-                    Text("Share")
+                    Text(stringResource(R.string.action_share))
                 }
             }
         }

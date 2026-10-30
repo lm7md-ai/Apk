@@ -35,6 +35,8 @@ import androidx.compose.material.icons.filled.Shield
 import com.universal.apkfactory.ui.components.EvidenceBox
 import com.universal.apkfactory.ui.components.FactoryCardHeader
 import com.universal.apkfactory.ui.components.GradientButton
+import com.universal.apkfactory.R
+import androidx.compose.ui.res.stringResource
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
@@ -133,7 +135,7 @@ fun ConfigScreen(
                 )
                 if (project.evidence.isNotEmpty()) {
                     Text(
-                        text = "Detection signals",
+                        text = stringResource(R.string.config_signals),
                         style = MaterialTheme.typography.labelLarge,
                         modifier = Modifier.padding(top = 4.dp),
                     )
@@ -157,15 +159,15 @@ fun ConfigScreen(
             ) {
                 FactoryCardHeader(
                     icon = Icons.Filled.Badge,
-                    title = "App identity",
-                    subtitle = "Name, package id, version and launcher icon",
+                    title = stringResource(R.string.config_identity),
+                    subtitle = stringResource(R.string.config_identity_sub),
                 )
                 OutlinedTextField(
                     value = config.appName,
                     onValueChange = { value ->
                         onUpdateConfig { it.copy(appName = value) }
                     },
-                    label = { Text("App name") },
+                    label = { Text(stringResource(R.string.label_app_name)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
@@ -174,7 +176,7 @@ fun ConfigScreen(
                     onValueChange = { value ->
                         onUpdateConfig { it.copy(packageName = value) }
                     },
-                    label = { Text("Package name") },
+                    label = { Text(stringResource(R.string.label_package_name)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
@@ -184,7 +186,7 @@ fun ConfigScreen(
                         onValueChange = { value ->
                             onUpdateConfig { it.copy(versionName = value) }
                         },
-                        label = { Text("Version name") },
+                        label = { Text(stringResource(R.string.label_version_name)) },
                         singleLine = true,
                         modifier = Modifier.weight(1f),
                     )
@@ -194,7 +196,7 @@ fun ConfigScreen(
                             val parsed = value.filter { it.isDigit() }.toIntOrNull() ?: 1
                             onUpdateConfig { it.copy(versionCode = parsed) }
                         },
-                        label = { Text("Version code") },
+                        label = { Text(stringResource(R.string.label_version_code)) },
                         singleLine = true,
                         modifier = Modifier.weight(0.6f),
                     )
@@ -211,16 +213,16 @@ fun ConfigScreen(
                         tint = MaterialTheme.colorScheme.primary,
                     )
                     Column(modifier = Modifier.weight(1f)) {
-                        Text("Launcher icon", style = MaterialTheme.typography.titleSmall)
+                        Text(stringResource(R.string.config_icon_title), style = MaterialTheme.typography.titleSmall)
                         Text(
                             text = state.iconFileName
-                                ?: "Using the default shell icon",
+                                ?: stringResource(R.string.config_icon_default),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
                     OutlinedButton(onClick = { iconPicker.launch("image/*") }) {
-                        Text("Replace")
+                        Text(stringResource(R.string.action_replace))
                     }
                 }
             }
@@ -234,14 +236,14 @@ fun ConfigScreen(
             ) {
                 FactoryCardHeader(
                     icon = Icons.Filled.Palette,
-                    title = "Look & feel",
-                    subtitle = "Orientation and fullscreen",
+                    title = stringResource(R.string.config_look),
+                    subtitle = stringResource(R.string.config_look_sub),
                 )
 
                 val orientations = listOf(
-                    AppOrientation.UNSPECIFIED to "Auto",
-                    AppOrientation.PORTRAIT to "Portrait",
-                    AppOrientation.LANDSCAPE to "Landscape",
+                    AppOrientation.UNSPECIFIED to stringResource(R.string.orient_auto),
+                    AppOrientation.PORTRAIT to stringResource(R.string.orient_portrait),
+                    AppOrientation.LANDSCAPE to stringResource(R.string.orient_landscape),
                 )
                 SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
                     orientations.forEachIndexed { index, (orientation, label) ->
@@ -264,9 +266,9 @@ fun ConfigScreen(
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
-                        Text("Fullscreen / immersive")
+                        Text(stringResource(R.string.config_fullscreen))
                         Text(
-                            text = "Hide the status and navigation bars",
+                            text = stringResource(R.string.config_fullscreen_sub),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -298,8 +300,8 @@ fun ConfigScreen(
             ) {
                 FactoryCardHeader(
                     icon = Icons.Filled.Shield,
-                    title = "Permissions",
-                    subtitle = "INTERNET is always included for web and python shells",
+                    title = stringResource(R.string.config_permissions),
+                    subtitle = stringResource(R.string.config_permissions_sub),
                 )
                 Text(
                     text = "INTERNET is always included for web and python shells.",
@@ -329,7 +331,7 @@ fun ConfigScreen(
             ) {
                 FactoryCardHeader(
                     icon = Icons.Filled.RocketLaunch,
-                    title = "Build engine",
+                    title = stringResource(R.string.config_engine),
                 )
 
                 when (project.mode) {
@@ -337,8 +339,7 @@ fun ConfigScreen(
                     BuildMode.MODE_FAST_WEB,
                     BuildMode.MODE_FAST_PYTHON,
                     -> Text(
-                        text = "Instant on-device packaging: shell patch + 4-byte align + " +
-                            "V1/V2/V3 signing. No compiler needed.",
+                        text = stringResource(R.string.engine_fast_desc),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -347,23 +348,21 @@ fun ConfigScreen(
                     BuildMode.MODE_CLOUD_FLUTTER,
                     -> {
                         Text(
-                            text = "The Node/Flutter toolchain runs on a free GitHub Actions " +
-                                "runner; the result is finished and signed on this device.",
+                            text = stringResource(R.string.engine_cloud_desc),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                         if (!state.patPresent) {
                             AssistChip(
                                 onClick = onOpenKeystores,
-                                label = { Text("Add your GitHub token to continue") },
+                                label = { Text(stringResource(R.string.engine_need_token)) },
                             )
                         }
                     }
 
                     BuildMode.MODE_NATIVE_GRADLE -> {
                         Text(
-                            text = "Compile with the ARM64 Gradle toolchain on this device, " +
-                                "or on a GitHub Actions runner.",
+                            text = stringResource(R.string.engine_native_desc),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -375,7 +374,7 @@ fun ConfigScreen(
                                     index = 0, count = 2
                                 ),
                             ) {
-                                Text("On device")
+                                Text(stringResource(R.string.engine_on_device))
                             }
                             SegmentedButton(
                                 selected = !state.nativeOnDevice,
@@ -384,7 +383,7 @@ fun ConfigScreen(
                                     index = 1, count = 2
                                 ),
                             ) {
-                                Text("Cloud CI")
+                                Text(stringResource(R.string.engine_cloud_ci))
                             }
                         }
                         if (state.nativeOnDevice && !state.toolchainReady) {
@@ -398,7 +397,7 @@ fun ConfigScreen(
                         if (!state.nativeOnDevice && !state.patPresent) {
                             AssistChip(
                                 onClick = onOpenKeystores,
-                                label = { Text("Add your GitHub token to continue") },
+                                label = { Text(stringResource(R.string.engine_need_token)) },
                             )
                         }
                     }
@@ -459,15 +458,12 @@ private fun PythonRuntimeCard(
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Text(
-                text = "Python runtime",
+                text = stringResource(R.string.python_title),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
             )
             Text(
-                text = "MODE_FAST_PYTHON injects your project into a Python 3 host " +
-                    "shell. The shell needs a CPython aarch64-android distribution " +
-                    "(AndroidIDE / Termux style: bin/python3.x + lib/libpython3.x.so) " +
-                    "bundled at build time — provision it once here.",
+                text = stringResource(R.string.python_desc),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -483,13 +479,17 @@ private fun PythonRuntimeCard(
                         tint = MaterialTheme.colorScheme.primary,
                     )
                     Text(
-                        text = "Python ${info.pythonVersion} — ${info.fileCount} files, " +
+                        text = stringResource(
+                            R.string.python_installed,
+                            info.pythonVersion,
+                            info.fileCount,
                             info.displaySize,
+                        ),
                         style = MaterialTheme.typography.bodyMedium,
                     )
                 }
                 Text(
-                    text = "Source: ${info.sourceUrl}",
+                    text = stringResource(R.string.python_source, info.sourceUrl),
                     style = MaterialTheme.typography.labelSmall,
                     fontFamily = FontFamily.Monospace,
                     maxLines = 2,
@@ -501,7 +501,7 @@ private fun PythonRuntimeCard(
                         contentDescription = null,
                         modifier = Modifier.size(16.dp),
                     )
-                    Text("  Remove runtime")
+                    Text("  " + stringResource(R.string.python_remove))
                 }
             } else {
                 Row(
@@ -514,15 +514,14 @@ private fun PythonRuntimeCard(
                         tint = MaterialTheme.colorScheme.error,
                     )
                     Text(
-                        text = "No runtime provisioned — generated apps will show a " +
-                            "setup notice.",
+                        text = stringResource(R.string.python_missing),
                         style = MaterialTheme.typography.bodyMedium,
                     )
                 }
                 OutlinedTextField(
                     value = url,
                     onValueChange = { url = it },
-                    label = { Text("Runtime archive URL (tar.gz / tgz / zip)") },
+                    label = { Text(stringResource(R.string.label_runtime_url)) },
                     singleLine = true,
                     enabled = !state.pythonRuntimeBusy,
                     modifier = Modifier.fillMaxWidth(),
@@ -530,7 +529,7 @@ private fun PythonRuntimeCard(
                 OutlinedTextField(
                     value = sha256,
                     onValueChange = { sha256 = it },
-                    label = { Text("SHA-256 (recommended)") },
+                    label = { Text(stringResource(R.string.label_sha256)) },
                     singleLine = true,
                     enabled = !state.pythonRuntimeBusy,
                     modifier = Modifier.fillMaxWidth(),
@@ -545,7 +544,7 @@ private fun PythonRuntimeCard(
                         contentDescription = null,
                         modifier = Modifier.size(16.dp),
                     )
-                    Text("  Download & install")
+                    Text("  " + stringResource(R.string.python_install))
                 }
             }
 
@@ -561,12 +560,14 @@ private fun PythonRuntimeCard(
     }
 }
 
+@Composable
 private fun buttonLabelFor(mode: BuildMode, nativeOnDevice: Boolean): String = when (mode) {
-    BuildMode.MODE_APK_EDITOR -> "Patch & re-sign APK"
-    BuildMode.MODE_FAST_WEB -> "Build instant WebView APK"
-    BuildMode.MODE_FAST_PYTHON -> "Build instant Python APK"
-    BuildMode.MODE_CLOUD_WEB_OR_HYBRID -> "Build on GitHub Actions"
-    BuildMode.MODE_CLOUD_FLUTTER -> "Build Flutter on GitHub Actions"
+    BuildMode.MODE_APK_EDITOR -> stringResource(R.string.btn_apk_editor)
+    BuildMode.MODE_FAST_WEB -> stringResource(R.string.btn_fast_web)
+    BuildMode.MODE_FAST_PYTHON -> stringResource(R.string.btn_fast_python)
+    BuildMode.MODE_CLOUD_WEB_OR_HYBRID -> stringResource(R.string.btn_cloud)
+    BuildMode.MODE_CLOUD_FLUTTER -> stringResource(R.string.btn_flutter)
     BuildMode.MODE_NATIVE_GRADLE ->
-        if (nativeOnDevice) "Compile on device" else "Build on GitHub Actions"
+        if (nativeOnDevice) stringResource(R.string.btn_native_device)
+        else stringResource(R.string.btn_cloud)
 }

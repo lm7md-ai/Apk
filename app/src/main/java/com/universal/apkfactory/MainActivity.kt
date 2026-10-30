@@ -22,6 +22,7 @@ import androidx.activity.viewModels
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
+import com.universal.apkfactory.ui.AppLocale
 import com.universal.apkfactory.ui.UniversalFactoryApp
 import com.universal.apkfactory.ui.theme.UniversalFactoryTheme
 
@@ -44,6 +45,10 @@ class MainActivity : ComponentActivity() {
 
     private val notificationPermissionLauncher =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { /* granted or not: notifications are optional */ }
+
+    override fun attachBaseContext(base: android.content.Context) {
+        super.attachBaseContext(AppLocale.wrap(base))
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)

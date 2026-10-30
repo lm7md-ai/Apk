@@ -29,6 +29,8 @@ import androidx.compose.material.icons.filled.Key
 import androidx.compose.material.icons.filled.VpnKey
 import com.universal.apkfactory.ui.components.FactoryCardHeader
 import com.universal.apkfactory.ui.components.StatusPill
+import com.universal.apkfactory.R
+import androidx.compose.ui.res.stringResource
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -93,18 +95,17 @@ fun KeystoreScreen(
     if (showImportDialog && pendingKeystoreUri != null) {
         AlertDialog(
             onDismissRequest = { showImportDialog = false },
-            title = { Text("Import keystore") },
+            title = { Text(stringResource(R.string.keys_import)) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(
-                        text = "Enter the password of the selected keystore " +
-                            "(JKS or PKCS12 / BKS).",
+                        text = stringResource(R.string.keys_import_desc),
                         style = MaterialTheme.typography.bodySmall,
                     )
                     OutlinedTextField(
                         value = importPassword,
                         onValueChange = { importPassword = it },
-                        label = { Text("Password") },
+                        label = { Text(stringResource(R.string.label_password)) },
                         visualTransformation = PasswordVisualTransformation(),
                         singleLine = true,
                     )
@@ -123,12 +124,12 @@ fun KeystoreScreen(
                     },
                     enabled = importPassword.isNotEmpty(),
                 ) {
-                    Text("Import")
+                    Text(stringResource(R.string.action_import))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showImportDialog = false }) {
-                    Text("Cancel")
+                    Text(stringResource(R.string.action_cancel))
                 }
             },
         )
@@ -149,20 +150,21 @@ fun KeystoreScreen(
             ) {
                 FactoryCardHeader(
                     icon = Icons.Filled.VpnKey,
-                    title = "GitHub Personal Access Token",
-                    subtitle = "Needed for cloud builds and repository ingestion",
+                    title = stringResource(R.string.pat_title),
+                    subtitle = stringResource(R.string.pat_sub),
                     badgeContainer = MaterialTheme.colorScheme.tertiaryContainer,
                     badgeTint = MaterialTheme.colorScheme.onTertiaryContainer,
                     trailing = {
                         if (state.patPresent) {
-                            StatusPill(text = "verified", ok = true)
+                            StatusPill(
+                                text = stringResource(R.string.pill_verified),
+                                ok = true,
+                            )
                         }
                     },
                 )
                 Text(
-                    text = "Needed for cloud builds on GitHub Actions. Create a classic " +
-                        "token at github.com/settings/tokens with the repo, workflow and " +
-                        "delete_repo scopes. It is stored encrypted on this device only.",
+                    text = stringResource(R.string.pat_desc),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -177,13 +179,16 @@ fun KeystoreScreen(
                             tint = MaterialTheme.colorScheme.primary,
                         )
                         Text(
-                            text = "Signed in as @${state.patLogin ?: "unknown"}",
+                            text = stringResource(
+                                R.string.pat_signed_in,
+                                state.patLogin ?: "unknown",
+                            ),
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.Medium,
                         )
                     }
                     OutlinedButton(onClick = onClearPat) {
-                        Text("Remove token from this device")
+                        Text(stringResource(R.string.pat_remove))
                     }
                 } else {
                     OutlinedTextField(
@@ -201,7 +206,7 @@ fun KeystoreScreen(
                         },
                         enabled = pat.isNotBlank() && !state.busy,
                     ) {
-                        Text("Save & verify")
+                        Text(stringResource(R.string.pat_save))
                     }
                 }
                 state.patVerifyMessage?.let { message ->
@@ -222,21 +227,18 @@ fun KeystoreScreen(
             ) {
                 FactoryCardHeader(
                     icon = Icons.Filled.Key,
-                    title = "Signing keystores",
-                    subtitle = "${state.keystores.size} store(s) on this device",
+                    title = stringResource(R.string.keys_title),
+                    subtitle = stringResource(R.string.keys_sub, state.keystores.size),
                 )
                 Text(
-                    text = "Every package gets a persistent keystore on first build; " +
-                        "updates stay signable. Import your own store to keep an existing " +
-                        "signature.",
+                    text = stringResource(R.string.keys_desc),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
 
                 if (state.keystores.isEmpty()) {
                     Text(
-                        text = "No keystores yet — they are created automatically when you " +
-                            "build an app.",
+                        text = stringResource(R.string.keys_empty),
                         style = MaterialTheme.typography.bodySmall,
                         fontFamily = FontFamily.Monospace,
                     )
@@ -254,9 +256,16 @@ fun KeystoreScreen(
                                 fontFamily = FontFamily.Monospace,
                             )
                             Text(
-                                text = "${record.packageName} • alias ${record.alias} • " +
-                                    formatDate(record.createdAt) +
-                                    if (record.hasStoredPassword) " • ready" else " • needs password",
+                                text = stringResource(
+                                    R.string.keys_record_meta,
+                                    record.packageName,
+                                    record.alias,
+                                    formatDate(record.createdAt) + if (record.hasStoredPassword) {
+                                        " • " + stringResource(R.string.keys_ready)
+                                    } else {
+                                        " • " + stringResource(R.string.keys_needs_password)
+                                    },
+                                ),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -271,7 +280,7 @@ fun KeystoreScreen(
                             contentDescription = null,
                             modifier = Modifier.size(18.dp),
                         )
-                        Text("Import")
+                        Text(stringResource(R.string.action_import))
                     }
                 }
 
@@ -279,10 +288,10 @@ fun KeystoreScreen(
                 OutlinedTextField(
                     value = newPackageName,
                     onValueChange = { newPackageName = it },
-                    label = { Text("com.example.app") },
+                    label = { Text(stringResource(R.string.label_package_hint)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
-                    supportingText = { Text("Generate a keystore for a specific package") },
+                    supportingText = { Text(stringResource(R.string.keys_generate_desc)) },
                 )
                 OutlinedButton(
                     onClick = {
@@ -291,7 +300,7 @@ fun KeystoreScreen(
                     },
                     enabled = newPackageName.isNotBlank() && !state.busy,
                 ) {
-                    Text("Generate keystore")
+                    Text(stringResource(R.string.keys_generate))
                 }
             }
         }

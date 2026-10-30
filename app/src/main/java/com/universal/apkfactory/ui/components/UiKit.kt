@@ -274,7 +274,9 @@ fun HeroHeader(modifier: Modifier = Modifier) {
                 fontWeight = FontWeight.Bold,
             )
             Text(
-                text = "Turn anything into an installable, signed Android app.",
+                text = androidx.compose.ui.res.stringResource(
+                    com.universal.apkfactory.R.string.tagline
+                ),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

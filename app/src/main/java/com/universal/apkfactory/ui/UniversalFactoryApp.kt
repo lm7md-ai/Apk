@@ -125,7 +125,9 @@ fun UniversalFactoryApp(viewModel: MainViewModel) {
                         }) {
                             Icon(
                                 imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = "Back",
+                                contentDescription = androidx.compose.ui.res.stringResource(
+                                    com.universal.apkfactory.R.string.action_back
+                                ),
                             )
                         }
                     }
@@ -207,11 +209,20 @@ fun UniversalFactoryApp(viewModel: MainViewModel) {
 /* Helpers                                                                */
 /* ---------------------------------------------------------------------- */
 
+@androidx.compose.runtime.Composable
 private fun screenTitle(screen: MainViewModel.Screen): String = when (screen) {
-    MainViewModel.Screen.HOME -> "Universal APK Factory"
-    MainViewModel.Screen.CONFIG -> "Configure & build"
-    MainViewModel.Screen.BUILD -> "Build"
-    MainViewModel.Screen.KEYSTORES -> "Keystores & Cloud"
+    MainViewModel.Screen.HOME -> androidx.compose.ui.res.stringResource(
+        com.universal.apkfactory.R.string.screen_home
+    )
+    MainViewModel.Screen.CONFIG -> androidx.compose.ui.res.stringResource(
+        com.universal.apkfactory.R.string.screen_config
+    )
+    MainViewModel.Screen.BUILD -> androidx.compose.ui.res.stringResource(
+        com.universal.apkfactory.R.string.screen_build
+    )
+    MainViewModel.Screen.KEYSTORES -> androidx.compose.ui.res.stringResource(
+        com.universal.apkfactory.R.string.screen_keystores
+    )
 }
 
 private fun backTarget(screen: MainViewModel.Screen): MainViewModel.Screen = when (screen) {

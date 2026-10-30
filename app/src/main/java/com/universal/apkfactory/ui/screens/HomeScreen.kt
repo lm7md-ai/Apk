@@ -30,6 +30,7 @@ import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material.icons.filled.CreateNewFolder
 import androidx.compose.material.icons.filled.FolderZip
 import androidx.compose.material.icons.filled.Key
+import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Memory
 import androidx.compose.material.icons.filled.PrecisionManufacturing
 import androidx.compose.material.icons.filled.Share
@@ -38,6 +39,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ElevatedCard
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -52,6 +54,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import com.universal.apkfactory.R
+import com.universal.apkfactory.ui.AppLocale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.universal.apkfactory.MainViewModel
@@ -119,7 +125,7 @@ fun HomeScreen(
                     ) {
                         CircularProgressIndicator(modifier = Modifier.size(20.dp))
                         Text(
-                            text = state.busyMessage ?: "Working …",
+                            text = state.busyMessage ?: stringResource(R.string.busy_working),
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.Medium,
                         )
@@ -155,20 +161,31 @@ fun HomeScreen(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             StatusPill(
-                text = if (state.toolchainReady) "Toolchain" else "No toolchain",
+                text = if (state.toolchainReady) {
+                    stringResource(R.string.pill_toolchain)
+                } else {
+                    stringResource(R.string.pill_no_toolchain)
+                },
                 ok = state.toolchainReady,
                 modifier = Modifier.weight(1f, fill = false),
             )
             StatusPill(
-                text = if (state.patPresent) "@${state.patLogin ?: "github"}" else "No token",
+                text = if (state.patPresent) {
+                    "@${state.patLogin ?: "github"}"
+                } else {
+                    stringResource(R.string.pill_no_token)
+                },
                 ok = state.patPresent,
                 modifier = Modifier.weight(1f, fill = false),
             )
             StatusPill(
                 text = if (state.pythonRuntime != null) {
-                    "Python ${state.pythonRuntime.pythonVersion}"
+                    stringResource(
+                        R.string.pill_python_version,
+                        state.pythonRuntime.pythonVersion,
+                    )
                 } else {
-                    "No Python"
+                    stringResource(R.string.pill_no_python)
                 },
                 ok = state.pythonRuntime != null,
                 modifier = Modifier.weight(1f, fill = false),
@@ -183,8 +200,8 @@ fun HomeScreen(
             ) {
                 FactoryCardHeader(
                     icon = Icons.Filled.Cloud,
-                    title = "From a GitHub repository",
-                    subtitle = "Branch, tag and subfolder URLs are supported",
+                    title = stringResource(R.string.home_github_title),
+                    subtitle = stringResource(R.string.home_github_hint),
                     badgeContainer = MaterialTheme.colorScheme.tertiaryContainer,
                     badgeTint = MaterialTheme.colorScheme.onTertiaryContainer,
                 )
@@ -200,7 +217,7 @@ fun HomeScreen(
                     enabled = githubUrl.isNotBlank() && !state.busy,
                     modifier = Modifier.fillMaxWidth(),
                 ) {
-                    Text("Fetch & detect")
+                    Text(stringResource(R.string.home_fetch_detect))
                 }
             }
         }
@@ -210,23 +227,23 @@ fun HomeScreen(
             SourceTile(
                 modifier = Modifier.weight(1f),
                 icon = Icons.Filled.FolderZip,
-                title = "ZIP / APK",
-                subtitle = "Pick an archive",
+                title = stringResource(R.string.home_zip_title),
+                subtitle = stringResource(R.string.home_zip_sub),
                 enabled = !state.busy,
                 onClick = { archivePicker.launch("*/*") },
             )
             SourceTile(
                 modifier = Modifier.weight(1f),
                 icon = Icons.Filled.CreateNewFolder,
-                title = "Folder",
-                subtitle = "Pick a directory",
+                title = stringResource(R.string.home_folder_title),
+                subtitle = stringResource(R.string.home_folder_sub),
                 enabled = !state.busy,
                 onClick = { folderPicker.launch(null) },
             )
         }
 
         InfoBanner(
-            text = "… or use the Android Share Sheet to send archives and GitHub links here.",
+            text = stringResource(R.string.home_share_hint),
             icon = Icons.Filled.Share,
         )
 
@@ -238,18 +255,24 @@ fun HomeScreen(
             ) {
                 FactoryCardHeader(
                     icon = Icons.Filled.Memory,
-                    title = "On-device compiler",
+                    title = stringResource(R.string.home_toolchain_title),
                     subtitle = if (state.toolchainReady) {
-                        "JDK 21 + Gradle 8.9 + Android SDK ready"
+                        stringResource(R.string.home_toolchain_ready)
                     } else {
-                        "Not downloaded yet (about 500 MiB, one time)"
+                        stringResource(R.string.home_toolchain_missing)
                     },
                     trailing = {
                         TextButton(
                             onClick = onPrepareToolchain,
                             enabled = !state.busy,
                         ) {
-                            Text(if (state.toolchainReady) "Verify" else "Download")
+                            Text(
+                                if (state.toolchainReady) {
+                                    stringResource(R.string.action_verify)
+                                } else {
+                                    stringResource(R.string.action_download)
+                                }
+                            )
                         }
                     },
                 )
@@ -273,16 +296,22 @@ fun HomeScreen(
                 )
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "Keystores & Cloud",
+                        text = stringResource(R.string.home_keystores_title),
                         style = MaterialTheme.typography.titleMedium,
                     )
                     Text(
-                        text = "${state.keystores.size} keystores • " +
-                            if (state.patPresent) {
-                                "GitHub token present (@${state.patLogin})"
-                            } else {
-                                "no GitHub token yet"
-                            },
+                        text = if (state.patPresent) {
+                            stringResource(
+                                R.string.home_keystores_count_token,
+                                state.keystores.size,
+                                state.patLogin ?: "github",
+                            )
+                        } else {
+                            stringResource(
+                                R.string.home_keystores_count_no_token,
+                                state.keystores.size,
+                            )
+                        },
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -295,6 +324,43 @@ fun HomeScreen(
             }
         }
 
+        // ---------- Language ----------
+        val context = LocalContext.current
+        var language by androidx.compose.runtime.rememberSaveable {
+            androidx.compose.runtime.mutableStateOf(AppLocale.current(context))
+        }
+        ElevatedCard(modifier = Modifier.fillMaxWidth()) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                FactoryCardHeader(
+                    icon = Icons.Filled.Language,
+                    title = stringResource(R.string.settings_language),
+                    subtitle = stringResource(R.string.settings_language_sub),
+                    badgeContainer = MaterialTheme.colorScheme.tertiaryContainer,
+                    badgeTint = MaterialTheme.colorScheme.onTertiaryContainer,
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    listOf(
+                        AppLocale.SYSTEM to R.string.lang_system,
+                        AppLocale.ENGLISH to R.string.lang_english,
+                        AppLocale.ARABIC to R.string.lang_arabic,
+                    ).forEach { (tag, labelRes) ->
+                        FilterChip(
+                            selected = language == tag,
+                            onClick = {
+                                language = tag
+                                AppLocale.set(context, tag)
+                                AppLocale.findActivity(context)?.recreate()
+                            },
+                            label = { Text(stringResource(labelRes)) },
+                        )
+                    }
+                }
+            }
+        }
+
         // ---------- How it works ----------
         ElevatedCard(modifier = Modifier.fillMaxWidth()) {
             Column(
@@ -303,24 +369,24 @@ fun HomeScreen(
             ) {
                 FactoryCardHeader(
                     icon = Icons.Filled.PrecisionManufacturing,
-                    title = "How it works",
+                    title = stringResource(R.string.home_how_title),
                     badgeContainer = MaterialTheme.colorScheme.surfaceVariant,
                     badgeTint = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 StepRow(
                     number = 1,
-                    title = "Feed it a project",
-                    description = "A ZIP, a folder, a GitHub link or an existing APK.",
+                    title = stringResource(R.string.home_step1_title),
+                    description = stringResource(R.string.home_step1_desc),
                 )
                 StepRow(
                     number = 2,
-                    title = "Tune the app",
-                    description = "Name, package id, icon, permissions — or accept the smart defaults.",
+                    title = stringResource(R.string.home_step2_title),
+                    description = stringResource(R.string.home_step2_desc),
                 )
                 StepRow(
                     number = 3,
-                    title = "Get an installable APK",
-                    description = "Built, 4-byte aligned and signed V1 + V2 + V3 in seconds.",
+                    title = stringResource(R.string.home_step3_title),
+                    description = stringResource(R.string.home_step3_desc),
                 )
             }
         }

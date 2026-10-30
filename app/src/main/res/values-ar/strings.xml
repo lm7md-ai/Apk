@@ -1,0 +1,177 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">مصنع APK</string>
+    <string name="app_full_name">Universal APK Factory &amp; Studio</string>
+
+    <!-- Notifications -->
+    <string name="notification_channel_builds">تقدّم البناء</string>
+    <string name="notification_channel_builds_desc">تقدّم لحظي للبناءات الجارية</string>
+    <string name="notification_channel_installs">حالة التثبيت</string>
+    <string name="notification_channel_installs_desc">نتائج جلسات مثبّت الحزم</string>
+    <string name="install_success_title">تم التثبيت بنجاح</string>
+    <string name="install_success_text">تم تثبيت %1$s على هذا الجهاز.</string>
+    <string name="install_failure_title">فشل التثبيت</string>
+    <string name="install_failure_text">تعذّر تثبيت %1$s: %2$s</string>
+
+    <!-- Install receiver -->
+    <string name="install_status_action">com.universal.apkfactory.INSTALL_STATUS</string>
+
+    <!-- On-device native compiler (engine-native-gradle) -->
+    <string name="native_build_notification_title">جارٍ الترجمة على الجهاز</string>
+    <string name="native_build_notification_text">بناء Gradle يعمل — انقر لعرض السجل المباشر</string>
+    <string name="native_build_action_cancel">إيقاف البناء</string>
+
+    <!-- ================= UI chrome (Amber Forge v2 localization) ================= -->
+
+    <!-- Generic actions -->
+    <string name="action_back">رجوع</string>
+    <string name="action_install">تثبيت</string>
+    <string name="action_share">مشاركة</string>
+    <string name="action_copy">نسخ</string>
+    <string name="action_copied">تم النسخ</string>
+    <string name="action_import">استيراد</string>
+    <string name="action_cancel">إلغاء</string>
+    <string name="action_verify">تحقّق</string>
+    <string name="action_download">تنزيل</string>
+    <string name="action_replace">استبدال</string>
+
+    <!-- Screen titles -->
+    <string name="screen_home">Universal APK Factory</string>
+    <string name="screen_config">الضبط والبناء</string>
+    <string name="screen_build">البناء</string>
+    <string name="screen_keystores">المفاتيح والسحابة</string>
+
+    <!-- Home -->
+    <string name="tagline">حوّل أي مشروع إلى تطبيق أندرويد قابل للتثبيت وموقَّع.</string>
+    <string name="busy_working">جارٍ العمل …</string>
+    <string name="home_github_title">من مستودع GitHub</string>
+    <string name="home_github_hint">تُدعم روابط الفروع والوسوم والمجلدات الفرعية</string>
+    <string name="home_fetch_detect">اجلب واكشف</string>
+    <string name="home_zip_title">ZIP / APK</string>
+    <string name="home_zip_sub">اختر ملفاً مضغوطاً</string>
+    <string name="home_folder_title">مجلد</string>
+    <string name="home_folder_sub">اختر مجلد المشروع</string>
+    <string name="home_share_hint">… أو استخدم قائمة المشاركة في أندرويد لإرسال الملفات المضغوطة وروابط GitHub إلى هنا.</string>
+    <string name="home_toolchain_title">المترجم على الجهاز</string>
+    <string name="home_toolchain_ready">JDK 21 + Gradle 8.9 + حزمة SDK جاهزة</string>
+    <string name="home_toolchain_missing">لم يُنزَّل بعد (نحو 500 ميغابايت، مرة واحدة)</string>
+    <string name="home_keystores_title">المفاتيح والسحابة</string>
+    <string name="home_keystores_count_token">%1$d مفتاحاً • توكن GitHub موجود (@%2$s)</string>
+    <string name="home_keystores_count_no_token">%1$d مفتاحاً • لا يوجد توكن GitHub بعد</string>
+    <string name="home_how_title">كيف يعمل</string>
+    <string name="home_step1_title">أعطه مشروعاً</string>
+    <string name="home_step1_desc">ملف ZIP أو مجلد أو رابط GitHub أو ملف APK جاهز.</string>
+    <string name="home_step2_title">اضبط التطبيق</string>
+    <string name="home_step2_desc">الاسم والمعرّف والأيقونة والأذونات — أو اقبل الاقتراحات الذكية.</string>
+    <string name="home_step3_title">احصل على APK قابل للتثبيت</string>
+    <string name="home_step3_desc">يُبنى ويُحاذى ويُوقَّع V1 + V2 + V3 خلال ثوانٍ.</string>
+    <string name="pill_toolchain">الأدوات</string>
+    <string name="pill_no_toolchain">بلا أدوات</string>
+    <string name="pill_no_token">بلا توكن</string>
+    <string name="pill_no_python">بلا Python</string>
+    <string name="pill_python_version">Python %1$s</string>
+
+    <!-- Language settings -->
+    <string name="settings_language">اللغة</string>
+    <string name="settings_language_sub">لغة الواجهة — يعيد تشغيل التطبيق</string>
+    <string name="lang_system">النظام</string>
+    <string name="lang_english">English</string>
+    <string name="lang_arabic">العربية</string>
+    <string name="pill_verified">موثّق</string>
+    <string name="pat_signed_in">مسجّل الدخول باسم @%1$s</string>
+
+    <!-- Build screen -->
+    <string name="phase_ready">جاهز</string>
+    <string name="phase_ingesting">استيراد المشروع …</string>
+    <string name="phase_detecting">كشف نوع المشروع …</string>
+    <string name="phase_fast">ترقيع القشرة والمحاذاة والتوقيع …</string>
+    <string name="phase_cloud">البناء على GitHub Actions …</string>
+    <string name="phase_native">الترجمة على الجهاز (Gradle) …</string>
+    <string name="phase_finalizing">التطهير والمحاذاة والتوقيع …</string>
+    <string name="phase_done">اكتمل البناء</string>
+    <string name="phase_failed">فشل البناء</string>
+    <string name="build_stop">إيقاف البناء</string>
+    <string name="build_adjust">تعديل الإعدادات</string>
+    <string name="build_restart">ابدأ من جديد</string>
+    <string name="build_log_title">سجل البناء</string>
+    <string name="build_log_lines">%1$d سطراً</string>
+    <string name="clipboard_label_build_log">سجل بناء APK Factory</string>
+    <string name="cloud_stage_preparing">تحضير البناء السحابي</string>
+    <string name="cloud_stage_uploading">رفع المشروع</string>
+    <string name="cloud_stage_queued">بانتظار منفّذ</string>
+    <string name="cloud_stage_running">الترجمة على GitHub</string>
+    <string name="cloud_stage_artifact">تنزيل الناتج</string>
+    <string name="cloud_stage_complete">انتهى البناء السحابي</string>
+    <string name="cloud_current_step">الخطوة الحالية: %1$s</string>
+    <string name="toolchain_provisioning">تجهيز أدوات البناء</string>
+    <string name="toolchain_downloading">تنزيل %1$s: %2$d / %3$d كيب.بايت</string>
+    <string name="toolchain_extracting">فكّ ضغط %1$s …</string>
+    <string name="native_summary_title">Gradle على الجهاز</string>
+    <string name="native_tasks">المهام: %1$s</string>
+    <string name="native_elapsed">المنقضي: %1$d ث</string>
+    <string name="result_meta">%1$.1f ميغابايت • موقَّع (V1 + V2 + V3) • محاذى 4 بايت</string>
+
+    <!-- Configure screen -->
+    <string name="config_signals">إشارات الكشف</string>
+    <string name="config_identity">هوية التطبيق</string>
+    <string name="config_identity_sub">الاسم والمعرّف والإصدار وأيقونة التشغيل</string>
+    <string name="label_app_name">اسم التطبيق</string>
+    <string name="label_package_name">اسم الحزمة</string>
+    <string name="label_version_name">اسم الإصدار</string>
+    <string name="label_version_code">رمز الإصدار</string>
+    <string name="config_icon_title">أيقونة التشغيل</string>
+    <string name="config_icon_default">تُستخدم أيقونة القشرة الافتراضية</string>
+    <string name="config_look">المظهر والسلوك</string>
+    <string name="config_look_sub">الاتجاه وملء الشاشة</string>
+    <string name="orient_auto">تلقائي</string>
+    <string name="orient_portrait">طولي</string>
+    <string name="orient_landscape">عرضي</string>
+    <string name="config_fullscreen">ملء الشاشة / غامر</string>
+    <string name="config_fullscreen_sub">إخفاء شريط الحالة وشريط التنقل</string>
+    <string name="config_permissions">الأذونات</string>
+    <string name="config_permissions_sub">يُضاف إذن INTERNET دائماً لقشرتي الويب وPython</string>
+    <string name="config_engine">محرك البناء</string>
+    <string name="engine_fast_desc">تغليف فوري على الجهاز: ترقيع القشرة + محاذاة 4 بايت + توقيع V1/V2/V3. لا يحتاج مترجماً.</string>
+    <string name="engine_cloud_desc">تعمل أدوات Node/Flutter على منفّذ GitHub Actions مجاني، ويُستكمل الناتج ويُوقَّع على هذا الجهاز.</string>
+    <string name="engine_native_desc">الترجمة بأدوات Gradle لمعمارية ARM64 على هذا الجهاز، أو على منفّذ GitHub Actions.</string>
+    <string name="engine_need_token">أضف توكن GitHub للمتابعة</string>
+    <string name="engine_on_device">على الجهاز</string>
+    <string name="engine_cloud_ci">السحابة (CI)</string>
+    <string name="btn_apk_editor">رقّع وأعد توقيع APK</string>
+    <string name="btn_fast_web">ابنِ APK فوري لـ WebView</string>
+    <string name="btn_fast_python">ابنِ APK فوري لـ Python</string>
+    <string name="btn_cloud">ابنِ على GitHub Actions</string>
+    <string name="btn_flutter">ابنِ Flutter على GitHub Actions</string>
+    <string name="btn_native_device">ترجمة على الجهاز</string>
+
+    <!-- Python runtime card -->
+    <string name="python_title">بيئة Python</string>
+    <string name="python_desc">يُحقن مشروعك في مسار MODE_FAST_PYTHON داخل قشرة Python 3. تحتاج القشرة توزيعة CPython لمعمارية aarch64-android (بنمط AndroidIDE / Termux: bin/python3.x + lib/libpython3.x.so) تُضمَّن وقت البناء — جهّزها مرة واحدة من هنا.</string>
+    <string name="python_missing">لا توجد بيئة مثبتة — ستعرض التطبيقات المولّدة تنبيه إعداد.</string>
+    <string name="python_installed">Python %1$s — %2$d ملفاً، %3$s</string>
+    <string name="python_source">المصدر: %1$s</string>
+    <string name="label_runtime_url">رابط أرشيف البيئة (tar.gz / tgz / zip)</string>
+    <string name="label_sha256">SHA-256 (موصى به)</string>
+    <string name="python_install">تنزيل وتثبيت</string>
+    <string name="python_remove">إزالة البيئة</string>
+
+    <!-- Keystores & Cloud -->
+    <string name="pat_title">رمز الوصول الشخصي لـ GitHub</string>
+    <string name="pat_sub">مطلوب للبناء السحابي واستيراد المستودعات</string>
+    <string name="pat_desc">مطلوب للبناء السحابي على GitHub Actions. أنشئ توكناً كلاسيكياً من github.com/settings/tokens بصلاحيات repo وworkflow وdelete_repo. يُخزَّن مشفَّراً على هذا الجهاز فقط.</string>
+    <string name="pat_save">حفظ وتحقّق</string>
+    <string name="pat_remove">إزالة التوكن من هذا الجهاز</string>
+    <string name="keys_title">مفاتيح التوقيع</string>
+    <string name="keys_sub">%1$d مخزن على هذا الجهاز</string>
+    <string name="keys_desc">كل حزمة تحصل على مخزن مفاتيح دائم عند أول بناء، وتبقى التحديثات قابلة للتوقيع. استورد مخزنك الخاص للحفاظ على توقيع قائم.</string>
+    <string name="keys_empty">لا توجد مفاتيح بعد — تُنشأ تلقائياً عند بناء تطبيق.</string>
+    <string name="keys_record_meta">%1$s • الاسم المستعار %2$s • %3$s</string>
+    <string name="keys_ready">جاهز</string>
+    <string name="keys_needs_password">يحتاج كلمة مرور</string>
+    <string name="keys_import">استيراد مخزن مفاتيح</string>
+    <string name="keys_import_desc">أدخل كلمة مرور المخزن المحدد (JKS أو PKCS12 / BKS).</string>
+    <string name="label_password">كلمة المرور</string>
+    <string name="label_package_hint">com.example.app</string>
+    <string name="keys_generate_desc">أنشئ مخزن مفاتيح لحزمة محددة</string>
+    <string name="keys_generate">إنشاء مخزن المفاتيح</string>
+</resources>

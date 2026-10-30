@@ -20,4 +20,158 @@
     <string name="native_build_notification_title">Compiling on device</string>
     <string name="native_build_notification_text">Gradle build running — tap to view the live terminal</string>
     <string name="native_build_action_cancel">Stop build</string>
+
+    <!-- ================= UI chrome (Amber Forge v2 localization) ================= -->
+
+    <!-- Generic actions -->
+    <string name="action_back">Back</string>
+    <string name="action_install">Install</string>
+    <string name="action_share">Share</string>
+    <string name="action_copy">Copy</string>
+    <string name="action_copied">Copied</string>
+    <string name="action_import">Import</string>
+    <string name="action_cancel">Cancel</string>
+    <string name="action_verify">Verify</string>
+    <string name="action_download">Download</string>
+    <string name="action_replace">Replace</string>
+
+    <!-- Screen titles -->
+    <string name="screen_home">Universal APK Factory</string>
+    <string name="screen_config">Configure &amp; build</string>
+    <string name="screen_build">Build</string>
+    <string name="screen_keystores">Keystores &amp; Cloud</string>
+
+    <!-- Home -->
+    <string name="tagline">Turn anything into an installable, signed Android app.</string>
+    <string name="busy_working">Working …</string>
+    <string name="home_github_title">From a GitHub repository</string>
+    <string name="home_github_hint">Branch, tag and subfolder URLs are supported</string>
+    <string name="home_fetch_detect">Fetch &amp; detect</string>
+    <string name="home_zip_title">ZIP / APK</string>
+    <string name="home_zip_sub">Pick an archive</string>
+    <string name="home_folder_title">Folder</string>
+    <string name="home_folder_sub">Pick a directory</string>
+    <string name="home_share_hint">… or use the Android Share Sheet to send archives and GitHub links here.</string>
+    <string name="home_toolchain_title">On-device compiler</string>
+    <string name="home_toolchain_ready">JDK 21 + Gradle 8.9 + Android SDK ready</string>
+    <string name="home_toolchain_missing">Not downloaded yet (about 500 MiB, one time)</string>
+    <string name="home_keystores_title">Keystores &amp; Cloud</string>
+    <string name="home_keystores_count_token">%1$d keystores • GitHub token present (@%2$s)</string>
+    <string name="home_keystores_count_no_token">%1$d keystores • no GitHub token yet</string>
+    <string name="home_how_title">How it works</string>
+    <string name="home_step1_title">Feed it a project</string>
+    <string name="home_step1_desc">A ZIP, a folder, a GitHub link or an existing APK.</string>
+    <string name="home_step2_title">Tune the app</string>
+    <string name="home_step2_desc">Name, package id, icon, permissions — or accept the smart defaults.</string>
+    <string name="home_step3_title">Get an installable APK</string>
+    <string name="home_step3_desc">Built, 4-byte aligned and signed V1 + V2 + V3 in seconds.</string>
+    <string name="pill_toolchain">Toolchain</string>
+    <string name="pill_no_toolchain">No toolchain</string>
+    <string name="pill_no_token">No token</string>
+    <string name="pill_no_python">No Python</string>
+    <string name="pill_python_version">Python %1$s</string>
+
+    <!-- Language settings -->
+    <string name="settings_language">Language</string>
+    <string name="settings_language_sub">Interface language — restarts the app</string>
+    <string name="lang_system">System</string>
+    <string name="lang_english">English</string>
+    <string name="lang_arabic">العربية</string>
+    <string name="pill_verified">verified</string>
+    <string name="pat_signed_in">Signed in as @%1$s</string>
+
+    <!-- Build screen -->
+    <string name="phase_ready">Ready</string>
+    <string name="phase_ingesting">Importing project …</string>
+    <string name="phase_detecting">Detecting stack …</string>
+    <string name="phase_fast">Patching shell, aligning &amp; signing …</string>
+    <string name="phase_cloud">Building on GitHub Actions …</string>
+    <string name="phase_native">Compiling on device (Gradle) …</string>
+    <string name="phase_finalizing">Sanitizing, aligning &amp; signing …</string>
+    <string name="phase_done">Build complete</string>
+    <string name="phase_failed">Build failed</string>
+    <string name="build_stop">Stop build</string>
+    <string name="build_adjust">Adjust configuration</string>
+    <string name="build_restart">Start over</string>
+    <string name="build_log_title">Build log</string>
+    <string name="build_log_lines">%1$d lines</string>
+    <string name="clipboard_label_build_log">APK Factory build log</string>
+    <string name="cloud_stage_preparing">Preparing cloud build</string>
+    <string name="cloud_stage_uploading">Uploading project</string>
+    <string name="cloud_stage_queued">Waiting for a runner</string>
+    <string name="cloud_stage_running">Compiling on GitHub</string>
+    <string name="cloud_stage_artifact">Downloading artifact</string>
+    <string name="cloud_stage_complete">Cloud build finished</string>
+    <string name="cloud_current_step">Current step: %1$s</string>
+    <string name="toolchain_provisioning">Toolchain provisioning</string>
+    <string name="toolchain_downloading">Downloading %1$s: %2$d / %3$d KiB</string>
+    <string name="toolchain_extracting">Extracting %1$s …</string>
+    <string name="native_summary_title">On-device Gradle</string>
+    <string name="native_tasks">Tasks: %1$s</string>
+    <string name="native_elapsed">Elapsed: %1$ds</string>
+    <string name="result_meta">%1$.1f MiB • signed (V1 + V2 + V3) • 4-byte aligned</string>
+
+    <!-- Configure screen -->
+    <string name="config_signals">Detection signals</string>
+    <string name="config_identity">App identity</string>
+    <string name="config_identity_sub">Name, package id, version and launcher icon</string>
+    <string name="label_app_name">App name</string>
+    <string name="label_package_name">Package name</string>
+    <string name="label_version_name">Version name</string>
+    <string name="label_version_code">Version code</string>
+    <string name="config_icon_title">Launcher icon</string>
+    <string name="config_icon_default">Using the default shell icon</string>
+    <string name="config_look">Look &amp; feel</string>
+    <string name="config_look_sub">Orientation and fullscreen</string>
+    <string name="orient_auto">Auto</string>
+    <string name="orient_portrait">Portrait</string>
+    <string name="orient_landscape">Landscape</string>
+    <string name="config_fullscreen">Fullscreen / immersive</string>
+    <string name="config_fullscreen_sub">Hide the status and navigation bars</string>
+    <string name="config_permissions">Permissions</string>
+    <string name="config_permissions_sub">INTERNET is always included for web and python shells</string>
+    <string name="config_engine">Build engine</string>
+    <string name="engine_fast_desc">Instant on-device packaging: shell patch + 4-byte align + V1/V2/V3 signing. No compiler needed.</string>
+    <string name="engine_cloud_desc">The Node/Flutter toolchain runs on a free GitHub Actions runner; the result is finished and signed on this device.</string>
+    <string name="engine_native_desc">Compile with the ARM64 Gradle toolchain on this device, or on a GitHub Actions runner.</string>
+    <string name="engine_need_token">Add your GitHub token to continue</string>
+    <string name="engine_on_device">On device</string>
+    <string name="engine_cloud_ci">Cloud CI</string>
+    <string name="btn_apk_editor">Patch &amp; re-sign APK</string>
+    <string name="btn_fast_web">Build instant WebView APK</string>
+    <string name="btn_fast_python">Build instant Python APK</string>
+    <string name="btn_cloud">Build on GitHub Actions</string>
+    <string name="btn_flutter">Build Flutter on GitHub Actions</string>
+    <string name="btn_native_device">Compile on device</string>
+
+    <!-- Python runtime card -->
+    <string name="python_title">Python runtime</string>
+    <string name="python_desc">MODE_FAST_PYTHON injects your project into a Python 3 host shell. The shell needs a CPython aarch64-android distribution (AndroidIDE / Termux style: bin/python3.x + lib/libpython3.x.so) bundled at build time — provision it once here.</string>
+    <string name="python_missing">No runtime provisioned — generated apps will show a setup notice.</string>
+    <string name="python_installed">Python %1$s — %2$d files, %3$s</string>
+    <string name="python_source">Source: %1$s</string>
+    <string name="label_runtime_url">Runtime archive URL (tar.gz / tgz / zip)</string>
+    <string name="label_sha256">SHA-256 (recommended)</string>
+    <string name="python_install">Download &amp; install</string>
+    <string name="python_remove">Remove runtime</string>
+
+    <!-- Keystores & Cloud -->
+    <string name="pat_title">GitHub Personal Access Token</string>
+    <string name="pat_sub">Needed for cloud builds and repository ingestion</string>
+    <string name="pat_desc">Needed for cloud builds on GitHub Actions. Create a classic token at github.com/settings/tokens with the repo, workflow and delete_repo scopes. It is stored encrypted on this device only.</string>
+    <string name="pat_save">Save &amp; verify</string>
+    <string name="pat_remove">Remove token from this device</string>
+    <string name="keys_title">Signing keystores</string>
+    <string name="keys_sub">%1$d store(s) on this device</string>
+    <string name="keys_desc">Every package gets a persistent keystore on first build; updates stay signable. Import your own store to keep an existing signature.</string>
+    <string name="keys_empty">No keystores yet — they are created automatically when you build an app.</string>
+    <string name="keys_record_meta">%1$s • alias %2$s • %3$s</string>
+    <string name="keys_ready">ready</string>
+    <string name="keys_needs_password">needs password</string>
+    <string name="keys_import">Import keystore</string>
+    <string name="keys_import_desc">Enter the password of the selected keystore (JKS or PKCS12 / BKS).</string>
+    <string name="label_password">Password</string>
+    <string name="label_package_hint">com.example.app</string>
+    <string name="keys_generate_desc">Generate a keystore for a specific package</string>
+    <string name="keys_generate">Generate keystore</string>
 </resources>
