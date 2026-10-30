@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Adaptive launcher foreground: a stylized anvil + Android package glyph.
+  Drawn on a 108dp grid with content inside the 66dp adaptive safe zone.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Anvil body -->
+    <path
+        android:fillColor="#FFD54F"
+        android:pathData="M30,50 L78,50 L70,60 L38,60 Z" />
+    <!-- Anvil horn -->
+    <path
+        android:fillColor="#FFD54F"
+        android:pathData="M78,50 L88,46 L88,54 L78,54 Z" />
+    <!-- Anvil base -->
+    <path
+        android:fillColor="#FFC107"
+        android:pathData="M44,60 L64,60 L60,68 L48,68 Z" />
+    <path
+        android:fillColor="#FFA000"
+        android:pathData="M42,68 L66,68 L66,72 L42,72 Z" />
+    <!-- Package (APK) descending onto the anvil -->
+    <path
+        android:fillColor="#4FC3F7"
+        android:pathData="M50,28 L58,28 L58,34 L54,32 Z" />
+    <path
+        android:fillColor="#81D4FA"
+        android:strokeColor="#0277BD"
+        android:strokeWidth="1.5"
+        android:pathData="M47,32 L61,32 L63,44 L45,44 Z" />
+    <!-- Spark -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,40 L56.2,44.5 L61,45 L57.5,48.2 L58.6,53 L54,50.6 L49.4,53 L50.5,48.2 L47,45 L51.8,44.5 Z" />
+</vector>

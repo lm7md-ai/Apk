@@ -1,0 +1,140 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Universal APK Factory & Studio — application manifest.
+
+  Ingestion channels (Module 1):
+    * SAF file picker (launched from the Compose dashboard, MainActivity)
+    * Android Share Sheet: ACTION_SEND with text/plain GitHub URLs,
+      application/zip and application/vnd.android.package-archive streams
+    * ACTION_VIEW for zip / apk content
+    * GitHub repository URL downloader (OkHttp + codeload.github.com)
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- Ingestion: GitHub downloads + cloud bridge -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
+    <!-- Build completion notifications (API 33+ runtime-gated in code) -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!-- Silent / prompted installation of built APKs via the
+         PackageInstaller Session API (user must grant "install unknown
+         apps" for this app on API 26+). -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+
+    <!-- On-device native compiler foreground service (engine-native-gradle) -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+
+    <!-- misc -->
+    <uses-permission android:name="android.permission.VIBRATE" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+
+    <uses-feature android:name="android.hardware.ram.low" android:required="false" />
+    <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
+
+    <!-- Android 10+ W^X compliance: runners packaged as
+         jniLibs/arm64-v8a/lib*.so must be extracted (extractNativeLibs=true,
+         set via useLegacyPackaging in app/build.gradle.kts). -->
+    <application
+        android:name=".ApkFactoryApplication"
+        android:allowBackup="false"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:label="@string/app_name"
+        android:supportsRtl="true"
+        android:extractNativeLibs="true"
+        android:theme="@style/Theme.UniversalApkFactory"
+        tools:targetApi="35">
+
+        <!-- Single-task so Share Sheet / VIEW intents route into the running
+             build session through onNewIntent(). -->
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:launchMode="singleTask"
+            android:windowSoftInputMode="adjustResize"
+            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden|uiMode">
+
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+
+            <!-- Share Sheet: GitHub repository URLs as plain text -->
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/plain" />
+            </intent-filter>
+
+            <!-- Share Sheet: zip archives and existing APKs -->
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="application/zip" />
+                <data android:mimeType="application/x-zip-compressed" />
+                <data android:mimeType="application/vnd.android.package-archive" />
+                <data android:mimeType="application/octet-stream" />
+            </intent-filter>
+
+            <!-- Open With: zip archives and existing APKs from file managers -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="content" />
+                <data android:scheme="file" />
+                <data android:mimeType="application/zip" />
+                <data android:mimeType="application/x-zip-compressed" />
+                <data android:mimeType="application/vnd.android.package-archive" />
+            </intent-filter>
+        </activity>
+
+        <!-- PackageInstaller session status receiver. Non-exported: the
+             status PendingIntent is created by this app (explicit package
+             set), so only this app's identity can deliver it. -->
+        <receiver
+            android:name=".core.signer.ApkInstallReceiver"
+            android:exported="false"
+            android:enabled="true">
+            <intent-filter>
+                <action android:name="com.universal.apkfactory.INSTALL_STATUS" />
+            </intent-filter>
+        </receiver>
+
+        <!-- Fallback install path: share a built APK with a file manager /
+             manual installer via FileProvider. -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
+
+        <!-- Android 11+ package visibility: allow resolving external browsers
+             for URLs opened from the WebView shell preview and cloud links,
+             and the system package installer used by the FileProvider
+             fallback install path. -->
+        <queries>
+            <intent>
+                <action android:name="android.intent.action.VIEW" />
+                <data android:scheme="https" />
+            </intent>
+            <intent>
+                <action android:name="android.intent.action.VIEW" />
+                <data android:scheme="http" />
+            </intent>
+            <intent>
+                <action android:name="android.intent.action.VIEW" />
+                <data android:mimeType="application/vnd.android.package-archive" />
+            </intent>
+        </queries>
+    </application>
+</manifest>

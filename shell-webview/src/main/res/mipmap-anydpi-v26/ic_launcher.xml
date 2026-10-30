@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Adaptive launcher icon of the WebView shell template. Both layers are
+  mipmap PNGs (ic_launcher_background / ic_launcher_foreground) so the
+  FastApkPatcherAndEditor can replace them byte-for-byte at patch time
+  without touching resources.arsc.
+-->
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <background android:drawable="@mipmap/ic_launcher_background" />
+    <foreground android:drawable="@mipmap/ic_launcher_foreground" />
+</adaptive-icon>

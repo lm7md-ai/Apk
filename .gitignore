@@ -1,0 +1,41 @@
+# Gradle
+.gradle/
+build/
+out/
+classes/
+
+# Android Studio / IntelliJ
+.idea/
+*.iml
+*.iws
+*.ipr
+captures/
+.navigation/
+kotlin-js-store/
+
+# Kotlin
+.kotlin/
+
+# Compiled shell APKs are generated into app assets by the
+# :shell-webview:packageWebviewShell / :shell-python:packagePythonShell
+# Gradle tasks during every build (see app/build.gradle.kts).
+app/src/main/assets/shells/
+
+# Provisioned Python runtime for the python shell (downloaded on demand
+# via :shell-python:downloadPythonRuntime).
+shell-python/src/main/assets/python_runtime/
+
+# Keystore / signing material (never commit)
+*.jks
+*.p12
+*.keystore
+*.pem
+*.pass
+
+# Logs / OS
+*.log
+.DS_Store
+Thumbs.db
+
+# Local configuration
+local.properties

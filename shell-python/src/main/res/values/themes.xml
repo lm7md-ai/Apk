@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The Python shell UI is a dark terminal; everything is built
+         programmatically in PythonHostShellActivity. -->
+    <style name="Theme.PythonShell" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">#0B1B2B</item>
+    </style>
+</resources>

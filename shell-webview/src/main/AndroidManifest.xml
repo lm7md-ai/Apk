@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  WebView Modern Shell — zero-Gradle APK template.
+
+  This manifest is mutated at patch time by FastApkPatcherAndEditor
+  (package id, version, label, permissions, provider authorities,
+  screenOrientation), which is why it intentionally ships with a neutral
+  identity and a minimal permission set.
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Required to load the app payload over https://appassets.androidplatform.net -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Optional capabilities; enabled per-project through the permission
+         checkboxes of the pre-build configuration screen. -->
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
+    <application
+        android:label="@string/shell_app_name"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:allowBackup="true"
+        android:usesCleartextTraffic="false"
+        android:supportsRtl="true"
+        android:hardwareAccelerated="true"
+        android:theme="@style/Theme.WebViewShell">
+
+        <activity
+            android:name=".WebViewModernShellActivity"
+            android:exported="true"
+            android:launchMode="singleTask"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboard|keyboardHidden|navigation|uiMode"
+            android:windowSoftInputMode="adjustResize">
+
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+    </application>
+</manifest>

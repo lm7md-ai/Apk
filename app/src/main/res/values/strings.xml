@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">APK Factory</string>
+    <string name="app_full_name">Universal APK Factory &amp; Studio</string>
+
+    <!-- Notifications -->
+    <string name="notification_channel_builds">Build progress</string>
+    <string name="notification_channel_builds_desc">Real-time progress of running builds</string>
+    <string name="notification_channel_installs">Install status</string>
+    <string name="notification_channel_installs_desc">PackageInstaller session results</string>
+    <string name="install_success_title">Installed successfully</string>
+    <string name="install_success_text">%1$s was installed on this device.</string>
+    <string name="install_failure_title">Installation failed</string>
+    <string name="install_failure_text">%1$s could not be installed: %2$s</string>
+
+    <!-- Install receiver -->
+    <string name="install_status_action">com.universal.apkfactory.INSTALL_STATUS</string>
+</resources>

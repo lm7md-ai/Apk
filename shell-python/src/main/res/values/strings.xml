@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Template label of the shell; the patcher always overwrites
+         android:label with the user's app name at build time. -->
+    <string name="shell_app_name">Python Shell</string>
+</resources>

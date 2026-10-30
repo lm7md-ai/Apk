@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  FileProvider shareable roots. Built, signed APKs live under
+  files/workspace/out/ and unaligned intermediates under cache/. Everything
+  else (keystores!) is intentionally NOT shareable.
+-->
+<paths>
+    <files-path
+        name="built_apks"
+        path="workspace/out/" />
+    <files-path
+        name="workspace"
+        path="workspace/" />
+    <cache-path
+        name="build_cache"
+        path="build/" />
+</paths>

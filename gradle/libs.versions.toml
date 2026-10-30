@@ -1,0 +1,66 @@
+# Central dependency catalog for Universal APK Factory & Studio.
+#
+# Library coordinates were verified against their upstream repositories:
+#   io.github.reandroid:ARSCLib  -> https://github.com/ReAndroid/ARSCLib (V1.4.0)
+#   com.github.iyxan23:zipalign-java -> https://github.com/Iyxan23/zipalign-java (v1.2.2, JitPack)
+#   com.android.tools.build:apksig  -> ships with the Android Gradle Plugin
+#   org.bouncycastle:bcpkix-jdk18on -> https://github.com/bcgit/bc-java
+
+[versions]
+agp = "8.7.3"
+kotlin = "2.0.21"
+coreKtx = "1.15.0"
+activityCompose = "1.9.3"
+composeBom = "2024.12.01"
+lifecycle = "2.8.7"
+navigationCompose = "2.8.5"
+coroutines = "1.9.0"
+okhttp = "4.12.0"
+arsclib = "1.4.0"
+zipalignJava = "v1.2.2"
+apksig = "8.7.3"
+bouncycastle = "1.78.1"
+webkit = "1.12.1"
+documentfile = "1.0.1"
+serializationJson = "1.7.3"
+
+[libraries]
+# ---- Jetpack Compose (Material 3) ----
+androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
+androidx-activity-compose = { group = "androidx.activity", name = "activity-compose", version.ref = "activityCompose" }
+androidx-compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "composeBom" }
+androidx-compose-ui = { group = "androidx.compose.ui", name = "ui" }
+androidx-compose-ui-graphics = { group = "androidx.compose.ui", name = "ui-graphics" }
+androidx-compose-ui-tooling = { group = "androidx.compose.ui", name = "ui-tooling" }
+androidx-compose-ui-tooling-preview = { group = "androidx.compose.ui", name = "ui-tooling-preview" }
+androidx-compose-material3 = { group = "androidx.compose.material3", name = "material3" }
+androidx-compose-material-icons-extended = { group = "androidx.compose.material", name = "material-icons-extended" }
+androidx-navigation-compose = { group = "androidx.navigation", name = "navigation-compose", version.ref = "navigationCompose" }
+androidx-lifecycle-runtime-ktx = { group = "androidx.lifecycle", name = "lifecycle-runtime-ktx", version.ref = "lifecycle" }
+androidx-lifecycle-runtime-compose = { group = "androidx.lifecycle", name = "lifecycle-runtime-compose", version.ref = "lifecycle" }
+androidx-lifecycle-viewmodel-compose = { group = "androidx.lifecycle", name = "lifecycle-viewmodel-compose", version.ref = "lifecycle" }
+
+# ---- Async / IO ----
+kotlinx-coroutines-android = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-android", version.ref = "coroutines" }
+kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "serializationJson" }
+okhttp = { group = "com.squareup.okhttp3", name = "okhttp", version.ref = "okhttp" }
+
+# ---- APK binary engineering stack ----
+# ARSCLib: ApkModule / AndroidManifestBlock / ResTable binary APK manipulation.
+arsclib = { group = "io.github.reandroid", name = "ARSCLib", version.ref = "arsclib" }
+# zipalign-java: pure-Java 4-byte (and 16 KiB .so) zip aligner.
+zipalign-java = { group = "com.github.iyxan23", name = "zipalign-java", version.ref = "zipalignJava" }
+# apksig: V1/V2/V3 APK signing engine from the Android Gradle Plugin.
+apksig = { group = "com.android.tools.build", name = "apksig", version.ref = "apksig" }
+# Isolated, uncrippled BouncyCastle (Android ships a crippled "BC" provider).
+bouncycastle-bcpkix = { group = "org.bouncycastle", name = "bcpkix-jdk18on", version.ref = "bouncycastle" }
+
+# ---- Shell support libraries ----
+androidx-webkit = { group = "androidx.webkit", name = "webkit", version.ref = "webkit" }
+androidx-documentfile = { group = "androidx.documentfile", name = "documentfile", version.ref = "documentfile" }
+
+[plugins]
+android-application = { id = "com.android.application", version.ref = "agp" }
+kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
+kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
