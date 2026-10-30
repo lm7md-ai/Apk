@@ -170,14 +170,16 @@ tasks.register("downloadPythonRuntime") {
             // trailing lambda resolves ambiguously against the Groovy
             // eachFile(Closure) overload in this script scope.
             eachFile(
-                Action<FileCopyDetails> { file ->
-                    val segments = file.relativePath.segments
+                Action<FileCopyDetails> {
+                    // In the Gradle Kotlin DSL, Action<T> lambdas receive T
+                    // as the implicit receiver (not as a parameter).
+                    val segments = relativePath.segments
                     val knownTopDirs = setOf(
                         "app", "src", "gradle", "build", "dist", "out",
                         "assets", "res", "www", "public", "lib", "bin"
                     )
                     if (segments.size > 1 && segments[0].lowercase() !in knownTopDirs) {
-                        file.relativePath = RelativePath(
+                        relativePath = RelativePath(
                             true,
                             *segments.drop(1).toTypedArray()
                         )
