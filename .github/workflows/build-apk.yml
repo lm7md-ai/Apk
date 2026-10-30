@@ -79,6 +79,7 @@ jobs:
                  "$DEST/lib/python$PYVER/idlelib" \
                  "$DEST/lib/python$PYVER/tkinter" \
                  "$DEST/lib/python$PYVER/turtledemo" \
+                 "$DEST/lib/python$PYVER/venv/scripts" \
                  "$DEST/lib/pkgconfig"
           find "$DEST" -name '__pycache__' -type d -prune -exec rm -rf {} +
           if [ -n "$(find "$DEST" -type l)" ]; then
@@ -135,6 +136,38 @@ jobs:
           chmod +x gradlew
           set -o pipefail
           ./gradlew :app:assembleDebug --no-daemon --stacktrace 2>&1 | tee gradle-build.log
+
+      - name: Verify the bundled runtime survived asset packaging
+        run: |
+          set -euo pipefail
+          SHELL_APK="app/src/main/assets/shells/python_runtime_shell.apk"
+          DISK=$(find shell-python/src/main/assets/python_runtime -type f | wc -l)
+          APK=$(unzip -l "$SHELL_APK" | grep -c "assets/python_runtime/")
+          echo "runtime files on disk : $DISK"
+          echo "entries in shell APK  : $APK"
+          if [ "$DISK" -ne "$APK" ]; then
+            echo "ERROR: asset packaging dropped file(s)! Missing entries:"
+            comm -23 \
+              <(cd shell-python/src/main/assets/python_runtime && find . -type f | sed 's|^\./||' | sort) \
+              <(unzip -l "$SHELL_APK" | awk '{print $4}' | grep '^assets/python_runtime/' \
+                | sed 's|^assets/python_runtime/||' | sort) || true
+            exit 1
+          fi
+          # Canaries for the `_`-prefixed trees the default aapt2 pattern
+          # used to drop.
+          for canary in \
+            "lib/python${PYTHON_BUNDLED_VERSION}/site-packages/pip/_internal/main.py" \
+            "lib/python${PYTHON_BUNDLED_VERSION}/site-packages/pip/_vendor/__init__.py" \
+            "lib/python${PYTHON_BUNDLED_VERSION}/_pyrepl/__init__.py" \
+            "lib/python${PYTHON_BUNDLED_VERSION}/zipfile/_path/__init__.py" \
+            "lib/python${PYTHON_BUNDLED_VERSION}/compression/_common/__init__.py" \
+            "bin/python${PYTHON_BUNDLED_VERSION}"; do
+            if ! unzip -l "$SHELL_APK" | grep -q "assets/python_runtime/$canary"; then
+              echo "ERROR: canary missing from the shell APK: $canary"
+              exit 1
+            fi
+          done
+          echo "All canaries present — the runtime is fully packaged."
 
       - name: On failure, publish the error digest to the branch
         if: failure()

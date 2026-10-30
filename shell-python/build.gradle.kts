@@ -52,6 +52,17 @@ android {
             assets.srcDirs("src/main/assets")
         }
     }
+
+    androidResources {
+        // AGP/aapt2's default ignore-assets pattern contains an `_*` rule
+        // that silently drops every `_`-prefixed asset DIRECTORY — which
+        // would strip pip's `_internal/` + `_vendor/` trees, the stdlib's
+        // `_pyrepl/`, `zipfile/_path/`, `compression/_common/`,
+        // `ensurepip/_bundled/` … from the bundled CPython runtime.
+        // Replace the default with a fully-negated list: ignore nothing.
+        ignoreAssetsPattern =
+            "!.svn:!.git:!.ds_store:!*.scc:!CVS:!thumbs.db:!picasa.ini:!*~"
+    }
 }
 
 dependencies {
