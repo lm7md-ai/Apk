@@ -1,9 +1,9 @@
 name: Build APK
 
-# Temporary push trigger (probe + final runs); reverted to dispatch-only
-# after the Python-runtime SHA pin lands.
+# Manual dispatch only. Push-triggering was disabled after the development
+# burst: the retrieval step commits build output back to the branch, and
+# branch-maintenance pushes (resetting that output) would re-trigger builds.
 on:
-  push:
   workflow_dispatch:
 
 permissions:
