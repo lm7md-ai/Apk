@@ -24,7 +24,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.CloudDownload
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Image
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -48,7 +52,9 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.layout.size
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.universal.apkfactory.MainViewModel
@@ -78,6 +84,8 @@ fun ConfigScreen(
     onToggleNativeOnDevice: (Boolean) -> Unit,
     onStartBuild: () -> Unit,
     onOpenKeystores: () -> Unit,
+    onInstallPythonRuntime: (url: String, sha256: String) -> Unit,
+    onClearPythonRuntime: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val problems = config.validate()
@@ -264,6 +272,15 @@ fun ConfigScreen(
             }
         }
 
+        // ---------- Python runtime (MODE_FAST_PYTHON) ----------
+        if (project.mode == BuildMode.MODE_FAST_PYTHON) {
+            PythonRuntimeCard(
+                state = state,
+                onInstall = onInstallPythonRuntime,
+                onClear = onClearPythonRuntime,
+            )
+        }
+
         // ---------- Permissions ----------
         ElevatedCard(modifier = Modifier.fillMaxWidth()) {
             Column(
@@ -400,6 +417,132 @@ fun ConfigScreen(
         }
 
         Spacer(modifier = Modifier.height(24.dp))
+    }
+}
+
+/* ---------------------------------------------------------------------- */
+/* Python runtime provisioning card                                       */
+/* ---------------------------------------------------------------------- */
+
+/**
+ * Downloads + verifies a CPython aarch64-android distribution which is
+ * injected into every MODE_FAST_PYTHON build (assets/python_runtime/).
+ */
+@Composable
+private fun PythonRuntimeCard(
+    state: MainViewModel.UiState,
+    onInstall: (url: String, sha256: String) -> Unit,
+    onClear: () -> Unit,
+) {
+    var url by rememberSaveable { mutableStateOf("") }
+    var sha256 by rememberSaveable { mutableStateOf("") }
+    val info = state.pythonRuntime
+
+    ElevatedCard(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Text(
+                text = "Python runtime",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Text(
+                text = "MODE_FAST_PYTHON injects your project into a Python 3 host " +
+                    "shell. The shell needs a CPython aarch64-android distribution " +
+                    "(AndroidIDE / Termux style: bin/python3.x + lib/libpython3.x.so) " +
+                    "bundled at build time — provision it once here.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+
+            if (info != null) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.CheckCircle,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                    )
+                    Text(
+                        text = "Python ${info.pythonVersion} — ${info.fileCount} files, " +
+                            info.displaySize,
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                }
+                Text(
+                    text = "Source: ${info.sourceUrl}",
+                    style = MaterialTheme.typography.labelSmall,
+                    fontFamily = FontFamily.Monospace,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                OutlinedButton(onClick = onClear, enabled = !state.pythonRuntimeBusy) {
+                    Icon(
+                        Icons.Filled.Delete,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp),
+                    )
+                    Text("  Remove runtime")
+                }
+            } else {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Warning,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.error,
+                    )
+                    Text(
+                        text = "No runtime provisioned — generated apps will show a " +
+                            "setup notice.",
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                }
+                OutlinedTextField(
+                    value = url,
+                    onValueChange = { url = it },
+                    label = { Text("Runtime archive URL (tar.gz / tgz / zip)") },
+                    singleLine = true,
+                    enabled = !state.pythonRuntimeBusy,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                OutlinedTextField(
+                    value = sha256,
+                    onValueChange = { sha256 = it },
+                    label = { Text("SHA-256 (recommended)") },
+                    singleLine = true,
+                    enabled = !state.pythonRuntimeBusy,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Button(
+                    onClick = { onInstall(url, sha256) },
+                    enabled = !state.pythonRuntimeBusy &&
+                        url.startsWith("http") && !state.busy,
+                ) {
+                    Icon(
+                        Icons.Filled.CloudDownload,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp),
+                    )
+                    Text("  Download & install")
+                }
+            }
+
+            state.pythonRuntimeProgress?.let { progress ->
+                Text(
+                    text = progress,
+                    style = MaterialTheme.typography.bodySmall,
+                    fontFamily = FontFamily.Monospace,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+            }
+        }
     }
 }
 

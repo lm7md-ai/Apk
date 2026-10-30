@@ -62,8 +62,12 @@ class BuildOrchestrator(
     private val client: okhttp3.OkHttpClient = okHttpClient
         ?: (appContext as com.universal.apkfactory.ApkFactoryApplication).okHttpClient
 
+    private val pythonRuntime: com.universal.apkfactory.core.python.PythonRuntimeManager by lazy {
+        com.universal.apkfactory.core.python.PythonRuntimeManager(appContext, client)
+    }
+
     private val patcherEngine: FastApkPatcherAndEditor by lazy {
-        FastApkPatcherAndEditor(appContext)
+        FastApkPatcherAndEditor(appContext, pythonRuntime)
     }
 
     private val signerEngine: ApkAlignerAndSigner by lazy {

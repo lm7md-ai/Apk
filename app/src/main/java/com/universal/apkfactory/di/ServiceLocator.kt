@@ -13,6 +13,7 @@ package com.universal.apkfactory.di
 import android.content.Context
 import com.universal.apkfactory.ApkFactoryApplication
 import com.universal.apkfactory.core.detector.SmartProjectDetector
+import com.universal.apkfactory.core.python.PythonRuntimeManager
 import com.universal.apkfactory.core.ingestion.IngestionManager
 import com.universal.apkfactory.core.signer.ApkAlignerAndSigner
 import com.universal.apkfactory.core.signer.KeyStoreGenerator
@@ -66,6 +67,10 @@ object ServiceLocator {
 
         val cloudBuilder: GitHubCloudBuilder by lazy {
             GitHubCloudBuilder(appContext, okHttpClient)
+        }
+
+        val pythonRuntimeManager: PythonRuntimeManager by lazy {
+            PythonRuntimeManager(appContext, okHttpClient)
         }
 
         val buildOrchestrator: BuildOrchestrator by lazy {

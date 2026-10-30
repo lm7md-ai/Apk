@@ -160,6 +160,11 @@ data class DetectedProject(
     val evidence: List<String>,
     /** Web root inside the project ("" at root, or "dist"/"build"). `null` for non-web modes. */
     val webRootDir: String? = null,
+    /**
+     * HTML entry file (relative to the web root) to load at launch.
+     * `null` → the standard `index.html`.
+     */
+    val webEntryFile: String? = null,
     /** Python entry file (relative path), when detected. */
     val pythonEntry: String? = null,
     /** True when a Node framework project already ships a prebuilt dist/build bundle. */

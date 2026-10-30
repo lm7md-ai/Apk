@@ -118,6 +118,10 @@ fun UniversalFactoryApp(viewModel: MainViewModel) {
                         onToggleNativeOnDevice = { viewModel.setNativeOnDevice(it) },
                         onStartBuild = { viewModel.startBuild() },
                         onOpenKeystores = { viewModel.openKeystores() },
+                        onInstallPythonRuntime = { url, sha ->
+                            viewModel.installPythonRuntime(url, sha)
+                        },
+                        onClearPythonRuntime = { viewModel.clearPythonRuntime() },
                         modifier = screenModifier,
                     )
                 }

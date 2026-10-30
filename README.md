@@ -20,6 +20,10 @@ Turn any of these inputs into a signed, installable `.apk` — entirely on-devic
 │                                                                    │
 │  core-ingestion   IngestionManager · ZipRootNormalizer ·            │
 │                   GitHubRepoDownloader                             │
+│  core-diag        BuildFailureAnalyzer (failure classification +     │
+│                   ready-to-send AI support prompt)                  │
+│  core-python      PythonRuntimeManager (CPython aarch64 runtime     │
+│                   provisioning + injection into MODE_FAST_PYTHON)   │
 │  core-detector    SmartProjectDetector (classification matrix) ·    │
 │                   HybridConfigParser (apkconfig.json + fallbacks)  │
 │  engine-patcher   FastApkPatcherAndEditor (ARSCLib)                 │
@@ -111,6 +115,30 @@ with `JAVA_HOME`, `ANDROID_HOME`, `GRADLE_USER_HOME`, `TMPDIR`, `HOME` and `LD_L
 * **aapt2 as `jniLibs/arm64-v8a/libaapt2.so`** — AGP spawns aapt2 via `execve()`, which Android 10+ blocks in app storage for targetSdk 29+. The factory therefore packages the AndroidIDE build-tools 34.0.4 aarch64 aapt2 inside its own APK at factory build time (`downloadAapt2Runtime` task); with `useLegacyPackaging=true` Android extracts it to `nativeLibraryDir`, which is executable. It is passed to Gradle via `-Pandroid.aapt2FromMavenOverride`.
 * **Android 14 special-use foreground service** — `NativeGradleService` declares `foregroundServiceType="specialUse"` with the `PROPERTY_SPECIAL_USE_FGS_SUBTYPE` property, as required by API 34+.
 * **Keystore cryptography** — Android's crippled `BC` provider is replaced process-wide with the full `org.bouncycastle:bcpkix-jdk18on` provider (`PKCS12`).
+
+## Smart failure diagnosis & AI support prompt
+
+Every failed build is analyzed by `core-diag/BuildFailureAnalyzer`:
+
+* The error message and the terminal-log tail are matched against failure
+  signatures (GitHub auth, connectivity, disk space, toolchain, cloud CI
+  runs, detection, corrupted payloads, signing, icons, OOM, Gradle
+  compilation errors …).
+* The Build screen shows a **diagnosis card**: category, probable cause and
+  ordered recovery steps (plus a direct link to the failed Actions run).
+* The card renders a **ready-to-send AI prompt** (Arabic framing, verbatim
+  English log excerpts, full build context) with one-tap *Copy* / *Share* —
+  paste it into any AI assistant for a deeper fix.
+
+## Python runtime provisioning
+
+`MODE_FAST_PYTHON` is fully enabled at runtime: the configuration screen
+offers a **Python runtime** card that downloads a CPython aarch64-android
+distribution (tar.gz / zip, AndroidIDE or Termux style) with SHA-256
+verification, extracts it (preserving symlinks through the packaged
+text-symlink convention the shell resolves at first launch), and injects it
+under `assets/python_runtime/` of every generated app. Without a runtime the
+build still succeeds — the generated app shows a setup notice.
 
 ## Building
 

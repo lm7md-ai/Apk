@@ -211,6 +211,7 @@ object SmartProjectDetector {
                 mode = BuildMode.MODE_FAST_WEB,
                 evidence = evidence,
                 webRootDir = webRoot,
+                webEntryFile = "index.html",
                 hasPrebuiltWebBundle = prebuiltWebRoot != null,
                 nodeFrameworks = frameworks,
                 rootFiles = entrySet,
@@ -262,6 +263,26 @@ object SmartProjectDetector {
             )
         }
 
+        // -- 7. Fallback: any HTML file (entry != index.html) ----------------
+        // Reached only when no python/gradle/flutter markers exist, so this
+        // cannot hijack other stacks — it only rescues static sites whose
+        // entry page has a different name (about.html, app.html, …).
+        val htmlFallback = firstHtmlEntry(entrySet)
+        if (htmlFallback != null) {
+            val root = htmlFallback.substringBeforeLast('/', "")
+            evidence.add("No index.html — using '${htmlFallback.substringAfterLast('/')}' " +
+                "as the entry page${if (root.isNotEmpty()) " (under '$root/')" else ""}.")
+            return DetectedProject(
+                source = source,
+                mode = BuildMode.MODE_FAST_WEB,
+                evidence = evidence,
+                webRootDir = root,
+                webEntryFile = htmlFallback.substringAfterLast('/'),
+                nodeFrameworks = frameworks,
+                rootFiles = entrySet,
+            )
+        }
+
         throw DetectionException(
             buildString {
                 append("Unable to detect a supported project stack. ")
@@ -275,6 +296,28 @@ object SmartProjectDetector {
             }
         )
     }
+
+    /**
+     * Best-effort HTML entry when no `index.html` exists: prefers files at
+     * the project root, then `dist/`, then `build/`; shortest name first.
+     */
+    private fun firstHtmlEntry(entries: Set<String>): String? =
+        entries
+            .filter { it.endsWith(".html", ignoreCase = true) }
+            .sortedWith(
+                compareBy(
+                    { path ->
+                        when {
+                            '/' !in path -> 0
+                            path.startsWith("dist/") -> 1
+                            path.startsWith("build/") -> 2
+                            else -> 3
+                        }
+                    },
+                    { it.length },
+                )
+            )
+            .firstOrNull()
 
     /* ================================================================== */
     /* Node / web analysis                                                 */

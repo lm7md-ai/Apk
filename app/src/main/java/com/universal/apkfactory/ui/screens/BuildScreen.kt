@@ -51,6 +51,7 @@ import com.universal.apkfactory.MainViewModel
 import com.universal.apkfactory.engine.cloud.GitHubCloudBuilder
 import com.universal.apkfactory.engine.gradle.NativeGradleService
 import com.universal.apkfactory.engine.gradle.ToolchainManager
+import com.universal.apkfactory.ui.components.FailureDiagnosisCard
 import com.universal.apkfactory.ui.components.TerminalLogViewer
 
 /**
@@ -114,6 +115,11 @@ fun BuildScreen(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.error,
                 )
+            }
+
+            // Smart failure diagnosis + ready-to-send AI prompt.
+            state.diagnosis?.let { diagnosis ->
+                FailureDiagnosisCard(diagnosis = diagnosis)
             }
         }
 

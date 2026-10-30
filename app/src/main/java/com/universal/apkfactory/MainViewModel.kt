@@ -19,6 +19,8 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.universal.apkfactory.core.detector.HybridConfigParser
 import com.universal.apkfactory.core.ingestion.IngestionManager
+import com.universal.apkfactory.core.diag.BuildFailureAnalyzer
+import com.universal.apkfactory.core.python.PythonRuntimeManager
 import com.universal.apkfactory.core.model.BuildLogLine
 import com.universal.apkfactory.core.model.BuildMode
 import com.universal.apkfactory.core.model.DetectedProject
@@ -85,6 +87,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val patPresent: Boolean = false,
         val patLogin: String? = null,
         val patVerifyMessage: String? = null,
+        /** Diagnosis of the last failed build (null when none). */
+        val diagnosis: BuildFailureAnalyzer.FailureDiagnosis? = null,
+        /** Provisioned CPython runtime, when installed. */
+        val pythonRuntime: PythonRuntimeManager.RuntimeInfo? = null,
+        val pythonRuntimeBusy: Boolean = false,
+        val pythonRuntimeProgress: String? = null,
     )
 
     data class KeyStoreRecordUi(
@@ -109,12 +117,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private var buildJob: Job? = null
     private var finalizeNativeJob: Job? = null
 
+    /** On-device Gradle builds need roughly 3 GiB of free internal storage. */
+    private val minNativeFreeBytes: Long = 3L * 1024 * 1024 * 1024
+
     init {
         _state.update { it.copy(patPresent = graph.cloudBuilder.hasToken()) }
         refreshKeystores()
         refreshToolchainReady()
 
         // Mirror the native compiler service into UiState.
+        refreshPythonRuntime()
         viewModelScope.launch {
             NativeGradleService.state.collect { native ->
                 val previous = _state.value.nativeState
@@ -133,6 +145,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                             phase = BuildPhase.FAILED,
                             busy = false,
                             error = native.message,
+                            diagnosis = failureDiagnosisOf(null, native.message),
                         )
                     }
                 }
@@ -222,6 +235,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     busyMessage = "Importing …",
                     phase = BuildPhase.INGESTING,
                     error = null,
+                    diagnosis = null,
                     logs = emptyList(),
                     resultApk = null,
                 )
@@ -232,7 +246,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 }
                 detectAndConfigure(source)
             } catch (error: Exception) {
-                _state.update { it.copy(phase = BuildPhase.FAILED, error = error.message) }
+                _state.update {
+                    it.copy(
+                        phase = BuildPhase.FAILED,
+                        error = error.message,
+                        diagnosis = failureDiagnosisOf(error),
+                    )
+                }
                 appendLog("ERROR: ${error.message}")
             } finally {
                 _state.update { it.copy(busy = false, busyMessage = null) }
@@ -249,6 +269,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     busyMessage = "Importing folder …",
                     phase = BuildPhase.INGESTING,
                     error = null,
+                    diagnosis = null,
                     logs = emptyList(),
                     resultApk = null,
                 )
@@ -261,7 +282,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 }
                 detectAndConfigure(source)
             } catch (error: Exception) {
-                _state.update { it.copy(phase = BuildPhase.FAILED, error = error.message) }
+                _state.update {
+                    it.copy(
+                        phase = BuildPhase.FAILED,
+                        error = error.message,
+                        diagnosis = failureDiagnosisOf(error),
+                    )
+                }
                 appendLog("ERROR: ${error.message}")
             } finally {
                 _state.update { it.copy(busy = false, busyMessage = null) }
@@ -279,6 +306,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     busyMessage = "Downloading repository …",
                     phase = BuildPhase.INGESTING,
                     error = null,
+                    diagnosis = null,
                     logs = emptyList(),
                     resultApk = null,
                 )
@@ -292,7 +320,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 }
                 detectAndConfigure(source)
             } catch (error: Exception) {
-                _state.update { it.copy(phase = BuildPhase.FAILED, error = error.message) }
+                _state.update {
+                    it.copy(
+                        phase = BuildPhase.FAILED,
+                        error = error.message,
+                        diagnosis = failureDiagnosisOf(error),
+                    )
+                }
                 appendLog("ERROR: ${error.message}")
             } finally {
                 _state.update { it.copy(busy = false, busyMessage = null) }
@@ -375,8 +409,81 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _state.update { it.copy(nativeOnDevice = onDevice) }
     }
 
+    /**
+     * Builds the diagnosis for the failure that just occurred, from the
+     * current mode, phase, error and captured terminal log.
+     */
+    private fun failureDiagnosisOf(
+        error: Throwable?,
+        messageOverride: String? = null,
+    ): BuildFailureAnalyzer.FailureDiagnosis =
+        BuildFailureAnalyzer.analyze(
+            mode = _state.value.project?.mode,
+            phaseName = _state.value.phase.name,
+            error = error ?: messageOverride?.let { RuntimeException(it) },
+            logs = _state.value.logs,
+        )
+
+    /* ------------------------------------------------------------------ */
+    /* Python runtime provisioning (MODE_FAST_PYTHON)                      */
+    /* ------------------------------------------------------------------ */
+
+    fun installPythonRuntime(url: String, sha256: String) {
+        if (_state.value.pythonRuntimeBusy) return
+        viewModelScope.launch {
+            _state.update {
+                it.copy(
+                    pythonRuntimeBusy = true,
+                    pythonRuntimeProgress = "Starting …",
+                    error = null,
+                )
+            }
+            try {
+                val info = graph.pythonRuntimeManager.install(
+                    url = url.trim(),
+                    expectedSha256 = sha256.trim().ifBlank { null },
+                ) { stage, fraction ->
+                    val pct = fraction?.let { " (${(it * 100).toInt()}%)" } ?: ""
+                    _state.update {
+                        it.copy(pythonRuntimeProgress = stage + pct)
+                    }
+                }
+                _state.update {
+                    it.copy(
+                        pythonRuntime = info,
+                        pythonRuntimeBusy = false,
+                        pythonRuntimeProgress = null,
+                    )
+                }
+                appendLog(
+                    "Python ${info.pythonVersion} runtime installed — " +
+                        "${info.fileCount} files, ${info.displaySize}."
+                )
+            } catch (error: Exception) {
+                appendLog("ERROR: ${error.message}")
+                _state.update {
+                    it.copy(
+                        pythonRuntimeBusy = false,
+                        pythonRuntimeProgress = null,
+                        error = error.message,
+                    )
+                }
+            }
+        }
+    }
+
+    fun clearPythonRuntime() {
+        graph.pythonRuntimeManager.clear()
+        _state.update { it.copy(pythonRuntime = null) }
+        appendLog("Python runtime removed.")
+    }
+
+    private fun refreshPythonRuntime() {
+        _state.update { it.copy(pythonRuntime = graph.pythonRuntimeManager.info()) }
+    }
+
     fun dismissError() {
-        _state.update { it.copy(error = null) }
+        _state.update { it.copy(error = null, diagnosis = null) }
     }
 
     /* ================================================================== */
@@ -417,6 +524,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     phase = BuildPhase.FAST_BUILDING,
                     busy = true,
                     error = null,
+                    diagnosis = null,
                     resultApk = null,
                 )
             }
@@ -433,7 +541,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             } catch (error: Exception) {
                 appendLog("ERROR: ${error.message}")
                 _state.update {
-                    it.copy(phase = BuildPhase.FAILED, busy = false, error = error.message)
+                    it.copy(
+                        phase = BuildPhase.FAILED,
+                        busy = false,
+                        error = error.message,
+                        diagnosis = failureDiagnosisOf(error),
+                    )
                 }
             }
         }
@@ -458,6 +571,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     phase = BuildPhase.CLOUD_BUILDING,
                     busy = true,
                     error = null,
+                    diagnosis = null,
                     resultApk = null,
                 )
             }
@@ -480,6 +594,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         phase = BuildPhase.FAILED,
                         busy = false,
                         error = error.message,
+                        diagnosis = failureDiagnosisOf(error),
                     )
                 }
             }
@@ -496,9 +611,28 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     phase = BuildPhase.NATIVE_BUILDING,
                     busy = true,
                     error = null,
+                    diagnosis = null,
                     resultApk = null,
                     cloudProgress = null,
                 )
+            }
+            // Pre-flight: JDK + Gradle + SDK + outputs need ~3 GiB free.
+            val stats = android.os.StatFs(graph.appContext.filesDir.absolutePath)
+            val freeGiB = stats.availableBytes / (1L shl 30)
+            if (stats.availableBytes < minNativeFreeBytes) {
+                val message = "Not enough free storage for an on-device build: " +
+                    "$freeGiB GiB available, ${minNativeFreeBytes / (1L shl 30)} GiB " +
+                    "required. Free up space or switch to the cloud build."
+                appendLog("ERROR: $message")
+                _state.update {
+                    it.copy(
+                        phase = BuildPhase.FAILED,
+                        busy = false,
+                        error = message,
+                        diagnosis = failureDiagnosisOf(RuntimeException(message)),
+                    )
+                }
+                return@launch
             }
             try {
                 val projectDir = graph.buildOrchestrator.prepareNormalizedProjectDir(
@@ -510,7 +644,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             } catch (error: Exception) {
                 appendLog("ERROR: ${error.message}")
                 _state.update {
-                    it.copy(phase = BuildPhase.FAILED, busy = false, error = error.message)
+                    it.copy(
+                        phase = BuildPhase.FAILED,
+                        busy = false,
+                        error = error.message,
+                        diagnosis = failureDiagnosisOf(error),
+                    )
                 }
             }
         }
@@ -533,7 +672,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             } catch (error: Exception) {
                 appendLog("ERROR: ${error.message}")
                 _state.update {
-                    it.copy(phase = BuildPhase.FAILED, busy = false, error = error.message)
+                    it.copy(
+                        phase = BuildPhase.FAILED,
+                        busy = false,
+                        error = error.message,
+                        diagnosis = failureDiagnosisOf(error),
+                    )
                 }
             }
         }

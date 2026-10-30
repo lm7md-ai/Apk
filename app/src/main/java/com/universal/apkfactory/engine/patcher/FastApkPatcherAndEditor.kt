@@ -67,7 +67,11 @@ import java.util.zip.ZipFile
  * (`ApkAlignerAndSigner`) performs the 4-byte alignment and V1/V2/V3
  * signing.
  */
-class FastApkPatcherAndEditor(private val context: Context) {
+class FastApkPatcherAndEditor(
+    private val context: Context,
+    /** Provisioned CPython runtime (optional; injected into PYTHON shells). */
+    private val pythonRuntime: com.universal.apkfactory.core.python.PythonRuntimeManager? = null,
+) {
 
     /* ================================================================== */
     /* Public API                                                          */
@@ -184,6 +188,11 @@ class FastApkPatcherAndEditor(private val context: Context) {
             var injectedBytes = 0L
             if (target is PatchTarget.Shell) {
                 writeShellConfig(module, target, config, detected, payload, onLog)
+                if (target.kind == ShellKind.PYTHON) {
+                    val runtime = injectPythonRuntime(module, onLog)
+                    injectedFiles += runtime.first
+                    injectedBytes += runtime.second
+                }
                 when (payload) {
                     is IngestedSource.ZipArchive -> {
                         ZipFile(payload.workspaceFile).use { archive ->
@@ -191,8 +200,8 @@ class FastApkPatcherAndEditor(private val context: Context) {
                                 module, archive, payload.workspaceFile,
                                 target.kind.payloadDir, onLog
                             )
-                            injectedFiles = injected.first
-                            injectedBytes = injected.second
+                            injectedFiles += injected.first
+                            injectedBytes += injected.second
                             // The write MUST happen while the archive is open:
                             // payload sources stream lazily from it.
                             finalizeWrite(module, output, onLog)
@@ -204,8 +213,8 @@ class FastApkPatcherAndEditor(private val context: Context) {
                             module, payload.workspaceFile,
                             target.kind.payloadDir, onLog
                         )
-                        injectedFiles = injected.first
-                        injectedBytes = injected.second
+                        injectedFiles += injected.first
+                        injectedBytes += injected.second
                         finalizeWrite(module, output, onLog)
                     }
 
@@ -658,6 +667,47 @@ class FastApkPatcherAndEditor(private val context: Context) {
         return entries.size to bytes
     }
 
+    /**
+     * Injects the provisioned CPython distribution under
+     * `assets/python_runtime/` (the tree the Python shell extracts on first
+     * launch and runs via /system/bin/linker64). No-op with a log hint when
+     * no runtime is installed.
+     */
+    private fun injectPythonRuntime(
+        module: ApkModule,
+        onLog: (String) -> Unit,
+    ): Pair<Int, Long> {
+        val runtimeRoot = pythonRuntime?.runtimeContentRoot()
+        if (runtimeRoot == null) {
+            onLog(
+                "Python runtime not provisioned — the generated app will show " +
+                    "a setup notice. Provision one from the Python Runtime card " +
+                    "to enable MODE_FAST_PYTHON fully."
+            )
+            return 0 to 0L
+        }
+        val files = runtimeRoot.walkTopDown()
+            .filter { it.isFile }
+            .filter { it.relativeTo(runtimeRoot).invariantSeparatorsPath != "meta.json" }
+            .toList()
+        var bytes = 0L
+        for (file in files) {
+            val relative = file.relativeTo(runtimeRoot).invariantSeparatorsPath
+            val source = FileInputSource(
+                file, "assets/$PYTHON_RUNTIME_ASSET_DIR/$relative"
+            ).apply {
+                setMethod(Archive.DEFLATED)
+            }
+            module.zipEntryMap.add(source)
+            bytes += file.length()
+        }
+        onLog(
+            "Injected Python runtime: ${files.size} files, " +
+                "${bytes / (1L shl 20)} MiB → assets/$PYTHON_RUNTIME_ASSET_DIR/."
+        )
+        return files.size to bytes
+    }
+
     private fun injectFolderPayload(
         module: ApkModule,
         root: File,
@@ -704,10 +754,11 @@ class FastApkPatcherAndEditor(private val context: Context) {
                     val webRoot = detected?.webRootDir
                         ?: detectWebRootFor(payload)
                         ?: ""
+                    val entryFile = detected?.webEntryFile ?: "index.html"
                     put(
                         "startPath",
                         payloadDir.removePrefix("assets/") + webRoot +
-                            (if (webRoot.isEmpty()) "" else "/") + "index.html"
+                            (if (webRoot.isEmpty()) "" else "/") + entryFile
                     )
                 }
 
@@ -834,5 +885,10 @@ class FastApkPatcherAndEditor(private val context: Context) {
         val options = BitmapFactory.Options().apply { inSampleSize = sample }
         return BitmapFactory.decodeFile(file.absolutePath, options)
             ?: throw PatcherException("Failed to decode the selected icon.")
+    }
+
+    companion object {
+        /** Asset dir the Python shell extracts on first launch. */
+        const val PYTHON_RUNTIME_ASSET_DIR = "python_runtime"
     }
 }
