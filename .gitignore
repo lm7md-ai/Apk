@@ -39,3 +39,7 @@ Thumbs.db
 
 # Local configuration
 local.properties
+
+# ARM64 aapt2 runtime, downloaded at factory build time by the
+# downloadAapt2Runtime task and packaged as jniLibs/arm64-v8a/libaapt2.so.
+app/src/main/jniLibs/

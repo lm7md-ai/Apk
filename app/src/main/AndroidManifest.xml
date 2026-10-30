@@ -94,6 +94,18 @@
             </intent-filter>
         </activity>
 
+        <!-- On-device ARM64 native compiler foreground service
+             (engine-native-gradle). specialUse on API 34+ with the required
+             subtype property; plain foreground service on API 26–33. -->
+        <service
+            android:name=".engine.gradle.NativeGradleService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Runs user-requested Gradle builds of imported Android projects entirely on-device (compilation toolchain execution)." />
+        </service>
+
         <!-- PackageInstaller session status receiver. Non-exported: the
              status PendingIntent is created by this app (explicit package
              set), so only this app's identity can deliver it. -->

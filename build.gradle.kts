@@ -5,6 +5,17 @@
  * application module, the WebView shell module and the Python shell module
  * all compile against one consistent toolchain (Kotlin 2.0, AGP 8.7).
  */
+buildscript {
+    // XZ decompression for the build-time aapt2-arm64 provisioning task
+    // (see app/build.gradle.kts, downloadAapt2Runtime).
+    repositories {
+        mavenCentral()
+    }
+    dependencies {
+        classpath("org.tukaani:xz:1.9")
+    }
+}
+
 plugins {
     alias(libs.plugins.android.application) apply false
     alias(libs.plugins.kotlin.android) apply false

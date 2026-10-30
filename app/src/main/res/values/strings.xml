@@ -15,4 +15,9 @@
 
     <!-- Install receiver -->
     <string name="install_status_action">com.universal.apkfactory.INSTALL_STATUS</string>
+
+    <!-- On-device native compiler (engine-native-gradle) -->
+    <string name="native_build_notification_title">Compiling on device</string>
+    <string name="native_build_notification_text">Gradle build running — tap to view the live terminal</string>
+    <string name="native_build_action_cancel">Stop build</string>
 </resources>

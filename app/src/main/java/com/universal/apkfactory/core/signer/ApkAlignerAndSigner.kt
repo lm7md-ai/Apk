@@ -86,6 +86,56 @@ class ApkAlignerAndSigner(private val context: Context) {
     }
 
     /* ================================================================== */
+    /* Step 0: sanitize externally produced APKs                           */
+    /* ================================================================== */
+
+    private val legacySignatureEntry = Regex(
+        "^META-INF/[^/]+\\.(SF|RSA|DSA|EC)$",
+        RegexOption.IGNORE_CASE,
+    )
+
+    /**
+     * Strips stale JAR signature entries (`META-INF/CERT.SF`,
+     * `META-INF/CERT.RSA`, …) from an APK produced by an external builder
+     * (on-device Gradle, GitHub Actions, Capacitor, Flutter) before it is
+     * aligned and re-signed here. Old v1 signatures are not valid for the
+     * modified/renamed package and, if left in place, can make some
+     * verifiers reject the freshly added signature block.
+     *
+     * The rewrite is a plain `java.util.zip` copy — no ARSCLib needed — and
+     * preserves each entry's compression method.
+     */
+    fun stripV1SignatureEntries(input: File, output: File, onLog: (String) -> Unit = {}): File {
+        if (output.exists()) output.delete()
+        output.parentFile?.mkdirs()
+        var stripped = 0
+        java.util.zip.ZipFile(input).use { zip ->
+            java.util.zip.ZipOutputStream(FileOutputStream(output)).use { target ->
+                for (entry in zip.entries()) {
+                    if (legacySignatureEntry.matches(entry.name)) {
+                        stripped++
+                        onLog("Dropping stale signature entry ${entry.name}")
+                        continue
+                    }
+                    target.putNextEntry(
+                        java.util.zip.ZipEntry(entry.name).apply {
+                            method = entry.method
+                            comment = entry.comment
+                            time = entry.time
+                        }
+                    )
+                    if (!entry.isDirectory) {
+                        zip.getInputStream(entry).use { it.copyTo(target) }
+                    }
+                    target.closeEntry()
+                }
+            }
+        }
+        onLog("Sanitized ${input.name}: removed $stripped legacy signature entries")
+        return output
+    }
+
+    /* ================================================================== */
     /* Step 1: zipalign (com.github.iyxan23:zipalign-java)                 */
     /* ================================================================== */
 

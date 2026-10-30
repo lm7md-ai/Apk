@@ -15,6 +15,7 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.os.Build
 import com.universal.apkfactory.core.signer.CryptoProviders
+import java.util.concurrent.TimeUnit
 
 /**
  * Application entry point.
@@ -77,6 +78,20 @@ class ApkFactoryApplication : Application() {
 
         manager.createNotificationChannel(builds)
         manager.createNotificationChannel(installs)
+    }
+
+    /**
+     * Process-wide HTTP client shared by the ingestion, toolchain and
+     * cloud-bridge engines. Long read timeouts are required because the
+     * toolchain components are hundreds of megabytes.
+     */
+    val okHttpClient: okhttp3.OkHttpClient by lazy {
+        okhttp3.OkHttpClient.Builder()
+            .connectTimeout(30, TimeUnit.SECONDS)
+            .readTimeout(15, TimeUnit.MINUTES)
+            .writeTimeout(5, TimeUnit.MINUTES)
+            .retryOnConnectionFailure(true)
+            .build()
     }
 
     companion object {

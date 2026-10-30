@@ -122,6 +122,10 @@ dependencies {
     // ---- Shell support ----
     implementation(libs.androidx.webkit)
     implementation(libs.androidx.documentfile)
+
+    // ---- Native toolchain + secure storage ----
+    implementation(libs.xz)
+    implementation(libs.androidx.security.crypto)
 }
 
 /*
@@ -150,8 +154,112 @@ dependencies {
 val webviewShellTask = ":shell-webview:packageWebviewShell"
 val pythonShellTask = ":shell-python:packagePythonShell"
 
+/*
+ * =====================================================================================
+ * AAPT2 ARM64 RUNTIME PROVISIONING (W^X-compliant)
+ * =====================================================================================
+ *
+ * AGP spawns aapt2 as an external process during Gradle builds. On Android 10+
+ * (targetSdk 29+) executing binaries from app data storage is forbidden
+ * (noexec), so the on-device native compiler (engine-native-gradle) cannot use
+ * a downloaded aapt2. Instead, the arm64 aapt2 from the AndroidIDE build-tools
+ * release is packaged HERE at factory build time as
+ * jniLibs/arm64-v8a/libaapt2.so — with useLegacyPackaging=true it is extracted
+ * to nativeLibraryDir at install time, which IS executable.
+ * NativeGradleService passes it to Gradle via
+ * -Pandroid.aapt2FromMavenOverride=<nativeLibraryDir>/libaapt2.so.
+ */
+val aapt2Output = layout.projectDirectory.file("src/main/jniLibs/arm64-v8a/libaapt2.so").asFile
+
+val aapt2Sources = listOf(
+    // AndroidIDE build-tools 34.0.4 aarch64 (official manifest.json coordinates).
+    "https://github.com/AndroidIDEOfficial/androidide-tools/releases/download/v34.0.4/build-tools-34.0.4-aarch64.tar.xz",
+)
+val aapt2UrlProperty = providers.gradleProperty("apkfactoryAapt2Url")
+
+tasks.register("downloadAapt2Runtime") {
+    group = "apkfactory"
+    description = "Downloads the arm64 aapt2 binary and packages it as jniLibs/arm64-v8a/libaapt2.so."
+    outputs.file(aapt2Output)
+
+    doLast {
+        if (aapt2Output.isFile && aapt2Output.length() > 1_000_000L) {
+            logger.lifecycle("aapt2 runtime already provisioned (${aapt2Output.length() / 1024} KiB).")
+            return@doLast
+        }
+        val url = aapt2UrlProperty.orNull ?: aapt2Sources.first()
+        val archive = File(
+            layout.buildDirectory.dir("aapt2-runtime").get().asFile,
+            "download.tar.xz"
+        ).also { it.parentFile.mkdirs() }
+        logger.lifecycle("Downloading arm64 aapt2 from $url …")
+        val connection = java.net.URI(url).toURL().openConnection()
+        connection.connectTimeout = 30_000
+        connection.readTimeout = 300_000
+        connection.setRequestProperty("User-Agent", "UniversalApkFactory/2.0")
+        connection.getInputStream().use { input ->
+            java.io.FileOutputStream(archive).use { output -> input.copyTo(output) }
+        }
+
+        // Minimal tar reader: extract only the entry named "aapt2".
+        org.tukaani.xz.XZInputStream(archive.inputStream().buffered()).use { xz ->
+            val header = ByteArray(512)
+            var found = false
+            while (!found) {
+                var read = 0
+                while (read < 512) {
+                    val n = xz.read(header, read, 512 - read)
+                    if (n < 0) throw GradleException("aapt2 entry not found in $url")
+                    read += n
+                }
+                val name = String(header, 0, 100).trimEnd('\u0000')
+                if (name.isEmpty()) break
+                val sizeText = String(header, 124, 12).trim('\u0000', ' ')
+                val size = if (sizeText.isEmpty()) 0L else sizeText.toLong(8)
+                val type = header[156]
+                if (type == '0'.code.toByte() && name.substringAfterLast('/') == "aapt2") {
+                    aapt2Output.parentFile.mkdirs()
+                    java.io.FileOutputStream(aapt2Output).use { output ->
+                        var remaining = size
+                        val buffer = ByteArray(64 * 1024)
+                        while (remaining > 0) {
+                            val n = xz.read(buffer, 0, minOf(buffer.size.toLong(), remaining).toInt())
+                            if (n < 0) break
+                            output.write(buffer, 0, n)
+                            remaining -= n
+                        }
+                    }
+                    found = true
+                } else {
+                    var remaining = size
+                    val buffer = ByteArray(64 * 1024)
+                    while (remaining > 0) {
+                        val n = xz.read(buffer, 0, minOf(buffer.size.toLong(), remaining).toInt())
+                        if (n < 0) break
+                        remaining -= n
+                    }
+                }
+                // consume padding
+                val padding = ((512 - (size % 512)) % 512).toInt()
+                if (padding > 0 && size > 0) {
+                    var skipped = 0
+                    val sink = ByteArray(512)
+                    while (skipped < padding) {
+                        val n = xz.read(sink, 0, padding - skipped)
+                        if (n < 0) break
+                        skipped += n
+                    }
+                }
+            }
+            if (!found) throw GradleException("aapt2 entry not found in $url")
+        }
+        archive.delete()
+        logger.lifecycle("aapt2 runtime provisioned: ${aapt2Output.relativeTo(rootDir)} (${aapt2Output.length() / 1024} KiB)")
+    }
+}
+
 tasks.named("preBuild") {
-    dependsOn(webviewShellTask, pythonShellTask)
+    dependsOn(webviewShellTask, pythonShellTask, "downloadAapt2Runtime")
 }
 
 // Convenience: `./gradlew packageShells` re-exports both shell APKs.

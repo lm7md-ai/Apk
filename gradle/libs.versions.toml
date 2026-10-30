@@ -23,6 +23,8 @@ bouncycastle = "1.78.1"
 webkit = "1.12.1"
 documentfile = "1.0.1"
 serializationJson = "1.7.3"
+xz = "1.9"
+securityCrypto = "1.1.0-alpha06"
 
 [libraries]
 # ---- Jetpack Compose (Material 3) ----
@@ -58,6 +60,12 @@ bouncycastle-bcpkix = { group = "org.bouncycastle", name = "bcpkix-jdk18on", ver
 # ---- Shell support libraries ----
 androidx-webkit = { group = "androidx.webkit", name = "webkit", version.ref = "webkit" }
 androidx-documentfile = { group = "androidx.documentfile", name = "documentfile", version.ref = "documentfile" }
+
+# ---- Native toolchain + secure storage ----
+# XZ decompression for the AndroidIDE aarch64 SDK archives (tar.xz).
+xz = { group = "org.tukaani", name = "xz", version.ref = "xz" }
+# EncryptedSharedPreferences for the GitHub PAT (engine-cloud-bridge).
+androidx-security-crypto = { group = "androidx.security", name = "security-crypto", version.ref = "securityCrypto" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
