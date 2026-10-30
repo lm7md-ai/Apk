@@ -134,6 +134,14 @@ The whole UI was redesigned around a coherent in-house design system:
   section cards on Configure, a gradient success band + copyable log card
   on Build, and status pills on Keystores & Cloud.
 
+## Localization (English + العربية)
+
+The full UI is localized (150 strings) with a **language card on the home
+screen** (System / English / العربية) that applies instantly and persists.
+Arabic gets complete RTL mirroring (`supportsRtl` + locale-wrapped base
+context), and Android 13+ exposes the app in the system per-app language
+settings (`localeConfig`). Placeholders and token formats stay verbatim.
+
 ## Smart failure diagnosis & AI support prompt
 
 Every failed build is analyzed by `core-diag/BuildFailureAnalyzer`:

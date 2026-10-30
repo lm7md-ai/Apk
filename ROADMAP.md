@@ -43,8 +43,8 @@ Ideas ordered by impact; anything unchecked is open for contribution.
       swap the payload + manifest deltas.
 - [ ] **AAB output** — Android App Bundles for Play distribution.
 - [ ] **Wear/TV/desktop targets** — shell variants for other form factors.
-- [ ] **Multi-language UI** — Arabic-first localization pass (strings.xml
-      `values-ar`), RTL layout audit.
+- [x] **Multi-language UI** — Arabic-first localization (strings.xml
+      `values-ar`), RTL mirroring, in-app language switcher.
 - [ ] **Telemetry (opt-in)** — anonymous failure-category counters to
       prioritize the most common build failures.
 
