@@ -52,8 +52,10 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -66,6 +68,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.shape.RoundedCornerShape
 import com.universal.apkfactory.MainViewModel
 import com.universal.apkfactory.core.model.AppOrientation
 import com.universal.apkfactory.core.model.BuildMode
@@ -439,8 +442,13 @@ fun ConfigScreen(
 /* ---------------------------------------------------------------------- */
 
 /**
- * Downloads + verifies a CPython aarch64-android distribution which is
- * injected into every MODE_FAST_PYTHON build (assets/python_runtime/).
+ * Python runtime status card (MODE_FAST_PYTHON).
+ *
+ * Since v5 the factory APK bundles a CPython aarch64-android distribution
+ * inside the python shell template — the card then presents the runtime as
+ * ready out of the box. A custom distribution can still be downloaded,
+ * checksum-verified and installed (advanced section); it is injected in
+ * place of the bundled one at patch time.
  */
 @Composable
 private fun PythonRuntimeCard(
@@ -450,7 +458,9 @@ private fun PythonRuntimeCard(
 ) {
     var url by rememberSaveable { mutableStateOf("") }
     var sha256 by rememberSaveable { mutableStateOf("") }
+    var showAdvanced by rememberSaveable { mutableStateOf(false) }
     val info = state.pythonRuntime
+    val bundled = state.pythonRuntimeBundled
 
     ElevatedCard(modifier = Modifier.fillMaxWidth()) {
         Column(
@@ -463,7 +473,9 @@ private fun PythonRuntimeCard(
                 fontWeight = FontWeight.SemiBold,
             )
             Text(
-                text = stringResource(R.string.python_desc),
+                text = stringResource(
+                    if (bundled) R.string.python_bundled_desc else R.string.python_desc
+                ),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -488,20 +500,60 @@ private fun PythonRuntimeCard(
                         style = MaterialTheme.typography.bodyMedium,
                     )
                 }
-                Text(
-                    text = stringResource(R.string.python_source, info.sourceUrl),
-                    style = MaterialTheme.typography.labelSmall,
-                    fontFamily = FontFamily.Monospace,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                OutlinedButton(onClick = onClear, enabled = !state.pythonRuntimeBusy) {
-                    Icon(
-                        Icons.Filled.Delete,
-                        contentDescription = null,
-                        modifier = Modifier.size(16.dp),
+                if (bundled) {
+                    Surface(
+                        color = MaterialTheme.colorScheme.tertiaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
+                        shape = RoundedCornerShape(8.dp),
+                    ) {
+                        Text(
+                            text = "  " + stringResource(R.string.python_bundled_badge) + "  ",
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                    }
+                } else {
+                    Text(
+                        text = stringResource(R.string.python_source, info.sourceUrl),
+                        style = MaterialTheme.typography.labelSmall,
+                        fontFamily = FontFamily.Monospace,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
                     )
-                    Text("  " + stringResource(R.string.python_remove))
+                    Text(
+                        text = stringResource(R.string.python_custom_note),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    OutlinedButton(onClick = onClear, enabled = !state.pythonRuntimeBusy) {
+                        Icon(
+                            Icons.Filled.Delete,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp),
+                        )
+                        Text("  " + stringResource(R.string.python_remove))
+                    }
+                }
+                TextButton(
+                    onClick = { showAdvanced = !showAdvanced },
+                    enabled = !state.pythonRuntimeBusy,
+                ) {
+                    Text(
+                        text = stringResource(
+                            if (showAdvanced) R.string.python_advanced_hide
+                            else R.string.python_advanced_show
+                        )
+                    )
+                }
+                if (showAdvanced) {
+                    ManualRuntimeFields(
+                        state = state,
+                        url = url,
+                        sha256 = sha256,
+                        onUrlChange = { url = it },
+                        onShaChange = { sha256 = it },
+                        onInstall = onInstall,
+                    )
                 }
             } else {
                 Row(
@@ -518,34 +570,14 @@ private fun PythonRuntimeCard(
                         style = MaterialTheme.typography.bodyMedium,
                     )
                 }
-                OutlinedTextField(
-                    value = url,
-                    onValueChange = { url = it },
-                    label = { Text(stringResource(R.string.label_runtime_url)) },
-                    singleLine = true,
-                    enabled = !state.pythonRuntimeBusy,
-                    modifier = Modifier.fillMaxWidth(),
+                ManualRuntimeFields(
+                    state = state,
+                    url = url,
+                    sha256 = sha256,
+                    onUrlChange = { url = it },
+                    onShaChange = { sha256 = it },
+                    onInstall = onInstall,
                 )
-                OutlinedTextField(
-                    value = sha256,
-                    onValueChange = { sha256 = it },
-                    label = { Text(stringResource(R.string.label_sha256)) },
-                    singleLine = true,
-                    enabled = !state.pythonRuntimeBusy,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                Button(
-                    onClick = { onInstall(url, sha256) },
-                    enabled = !state.pythonRuntimeBusy &&
-                        url.startsWith("http") && !state.busy,
-                ) {
-                    Icon(
-                        Icons.Filled.CloudDownload,
-                        contentDescription = null,
-                        modifier = Modifier.size(16.dp),
-                    )
-                    Text("  " + stringResource(R.string.python_install))
-                }
             }
 
             state.pythonRuntimeProgress?.let { progress ->
@@ -557,6 +589,46 @@ private fun PythonRuntimeCard(
                 )
             }
         }
+    }
+}
+
+/** URL + SHA-256 entry + install button for a custom runtime. */
+@Composable
+private fun ManualRuntimeFields(
+    state: MainViewModel.UiState,
+    url: String,
+    sha256: String,
+    onUrlChange: (String) -> Unit,
+    onShaChange: (String) -> Unit,
+    onInstall: (url: String, sha256: String) -> Unit,
+) {
+    OutlinedTextField(
+        value = url,
+        onValueChange = onUrlChange,
+        label = { Text(stringResource(R.string.label_runtime_url)) },
+        singleLine = true,
+        enabled = !state.pythonRuntimeBusy,
+        modifier = Modifier.fillMaxWidth(),
+    )
+    OutlinedTextField(
+        value = sha256,
+        onValueChange = onShaChange,
+        label = { Text(stringResource(R.string.label_sha256)) },
+        singleLine = true,
+        enabled = !state.pythonRuntimeBusy,
+        modifier = Modifier.fillMaxWidth(),
+    )
+    Button(
+        onClick = { onInstall(url, sha256) },
+        enabled = !state.pythonRuntimeBusy &&
+            url.startsWith("http") && !state.busy,
+    ) {
+        Icon(
+            Icons.Filled.CloudDownload,
+            contentDescription = null,
+            modifier = Modifier.size(16.dp),
+        )
+        Text("  " + stringResource(R.string.python_install))
     }
 }
 

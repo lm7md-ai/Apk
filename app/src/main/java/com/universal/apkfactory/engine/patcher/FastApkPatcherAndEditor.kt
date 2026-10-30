@@ -670,8 +670,13 @@ class FastApkPatcherAndEditor(
     /**
      * Injects the provisioned CPython distribution under
      * `assets/python_runtime/` (the tree the Python shell extracts on first
-     * launch and runs via /system/bin/linker64). No-op with a log hint when
-     * no runtime is installed.
+     * launch and runs via /system/bin/linker64).
+     *
+     * Since v5 the shell template itself carries a bundled runtime, so this
+     * is only needed when the user provisioned a *custom* distribution —
+     * which fully replaces the bundled tree (same-name entries are replaced
+     * by `add()`, and any stale files from a different Python version are
+     * dropped explicitly via `removeDir`).
      */
     private fun injectPythonRuntime(
         module: ApkModule,
@@ -679,13 +684,21 @@ class FastApkPatcherAndEditor(
     ): Pair<Int, Long> {
         val runtimeRoot = pythonRuntime?.runtimeContentRoot()
         if (runtimeRoot == null) {
+            val bundled = pythonRuntime?.bundledRuntimeInfo()
             onLog(
-                "Python runtime not provisioned — the generated app will show " +
-                    "a setup notice. Provision one from the Python Runtime card " +
-                    "to enable MODE_FAST_PYTHON fully."
+                if (bundled != null) {
+                    "Using the CPython ${bundled.pythonVersion} runtime bundled " +
+                        "inside the shell template (${bundled.fileCount} files, " +
+                        "${bundled.displaySize}) — no custom runtime installed."
+                } else {
+                    "Python runtime not provisioned — the generated app will show " +
+                        "a setup notice. Provision one from the Python Runtime card " +
+                        "to enable MODE_FAST_PYTHON fully."
+                }
             )
             return 0 to 0L
         }
+        module.zipEntryMap.removeDir("assets/$PYTHON_RUNTIME_ASSET_DIR")
         val files = runtimeRoot.walkTopDown()
             .filter { it.isFile }
             .filter { it.relativeTo(runtimeRoot).invariantSeparatorsPath != "meta.json" }
@@ -702,8 +715,9 @@ class FastApkPatcherAndEditor(
             bytes += file.length()
         }
         onLog(
-            "Injected Python runtime: ${files.size} files, " +
-                "${bytes / (1L shl 20)} MiB → assets/$PYTHON_RUNTIME_ASSET_DIR/."
+            "Injected custom Python runtime: ${files.size} files, " +
+                "${bytes / (1L shl 20)} MiB → assets/$PYTHON_RUNTIME_ASSET_DIR/ " +
+                "(replaces the bundled one)."
         )
         return files.size to bytes
     }

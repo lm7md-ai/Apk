@@ -4,10 +4,10 @@
 
   This manifest is mutated at patch time by FastApkPatcherAndEditor
   (package id, version, label, permissions, provider authorities,
-  screenOrientation). The Python 3.12 ARM64 runtime binaries live under
-  assets/python_runtime/ (provisioned at factory build time via the
-  downloadPythonRuntime Gradle task) and the user's program under
-  assets/python_app/.
+  screenOrientation). The Python 3 ARM64 runtime binaries live under
+  assets/python_runtime/ (bundled at factory build time by CI; a custom
+  runtime provisioned in the factory overrides it) and the user's program
+  under assets/python_app/.
 -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 

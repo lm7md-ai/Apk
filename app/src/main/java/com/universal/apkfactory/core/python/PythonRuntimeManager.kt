@@ -22,11 +22,15 @@ import java.util.zip.ZipFile
  * PythonRuntimeManager — provisions the CPython aarch64-android runtime
  * ============================================================================
  *
- * MODE_FAST_PYTHON wraps the user's project into the Python host shell, but
- * the shell needs a CPython 3 distribution (`bin/python3.x` +
- * `lib/libpython3.x.so`, aarch64-android, AndroidIDE/Termux style) bundled
- * under `assets/python_runtime/`. The factory APK ships without one (licence
- * and size reasons); this manager lets the user provision it at runtime:
+ * MODE_FAST_PYTHON wraps the user's project into the Python host shell, which
+ * needs a CPython 3 distribution (`bin/python3.x` + `lib/libpython3.x.so`,
+ * aarch64-android, AndroidIDE/Termux style) bundled under
+ * `assets/python_runtime/`. Since v5 the factory APK *ships with one*: CI
+ * provisions a CPython aarch64-android tree (plus a tiny NDK-compiled
+ * `Py_BytesMain` launcher at `bin/python3.x`) into the `:shell-python`
+ * template, so MODE_FAST_PYTHON works out of the box — see
+ * [bundledRuntimeInfo]. On top of that, this manager lets the user provision
+ * a custom distribution at runtime which then *overrides* the bundle:
  *
  *  1. `install(url, sha256)` — streams the archive over OkHttp while
  *     computing the SHA-256 digest, rejects checksum mismatches, then
@@ -267,6 +271,130 @@ class PythonRuntimeManager(
     fun clear() {
         File(context.filesDir, DISTRO_DIR).deleteRecursively()
     }
+
+    /* ====================================================================== */
+    /* Bundled runtime (inside the python shell template asset)               */
+    /* ====================================================================== */
+
+    /**
+     * Describes the CPython distribution that ships *inside* the factory APK:
+     * `assets/shells/python_runtime_shell.apk` carries a full runtime tree
+     * under `assets/python_runtime/` (provisioned at factory build time by
+     * CI). MODE_FAST_PYTHON works out of the box with this bundle; a custom
+     * runtime installed via [install] simply overrides it at patch time.
+     *
+     * The probe result is cached in SharedPreferences keyed by the factory's
+     * `versionCode`, so the (relatively costly) shell-APK inspection runs at
+     * most once per app version. Runs disk IO — call from a background
+     * dispatcher.
+     */
+    fun bundledRuntimeInfo(): RuntimeInfo? {
+        val versionCode = packageVersionCode()
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val cached = prefs.getString(PREF_BUNDLED_PROBE, null)
+        if (cached != null) {
+            try {
+                val json = JSONObject(cached)
+                if (json.optLong("versionCode") == versionCode) {
+                    val info = json.optJSONObject("info") ?: return null
+                    return decodeRuntimeInfo(info)
+                }
+            } catch (error: Exception) {
+                // Corrupt cache — fall through and re-probe.
+            }
+        }
+        val probed = probeBundledShellRuntime()
+        val payload = JSONObject().apply {
+            put("versionCode", versionCode)
+            probed?.let { put("info", encodeRuntimeInfo(it)) }
+        }
+        prefs.edit().putString(PREF_BUNDLED_PROBE, payload.toString()).apply()
+        return probed
+    }
+
+    /** True when the bundled shell template carries a runtime tree. */
+    fun hasBundledRuntime(): Boolean = bundledRuntimeInfo() != null
+
+    /**
+     * Opens the shell template APK (copying it out of the packaged assets on
+     * first probe) and validates the `assets/python_runtime/` layout the same
+     * way [validate] does for an extracted distro.
+     */
+    private fun probeBundledShellRuntime(): RuntimeInfo? {
+        val shellApk = File(context.cacheDir, "shells/$SHELL_ASSET_NAME")
+        if (!shellApk.isFile) {
+            try {
+                context.assets.open("shells/$SHELL_ASSET_NAME").use { input ->
+                    shellApk.parentFile?.mkdirs()
+                    val tmp = File(shellApk.parentFile, "$SHELL_ASSET_NAME.probe.tmp")
+                    tmp.outputStream().buffered().use { output ->
+                        input.copyTo(output, 64 * 1024)
+                    }
+                    if (!tmp.renameTo(shellApk)) tmp.delete()
+                }
+            } catch (error: Exception) {
+                return null // no shell asset (unexpected) — treat as absent
+            }
+        }
+        if (!shellApk.isFile) return null
+        val prefix = "assets/$BUNDLED_ASSET_DIR/"
+        return try {
+            ZipFile(shellApk).use { zip ->
+                val entries = zip.entries().asSequence()
+                    .filter { !it.isDirectory && it.name.startsWith(prefix) }
+                    .toList()
+                if (entries.isEmpty()) return@use null
+                val binEntry = entries
+                    .filter { BIN_BINARY_REGEX.containsMatchIn(it.name) }
+                    .filter { it.size > SYMLINK_TEXT_LIMIT }
+                    .maxByOrNull { it.size }
+                val libEntry = entries.firstOrNull { LIB_PYTHON_REGEX.containsMatchIn(it.name) }
+                if (binEntry == null || libEntry == null) return@use null
+                val version = Regex("python(3\\.\\d+)").find(binEntry.name)
+                    ?.groupValues?.get(1) ?: "3.x"
+                RuntimeInfo(
+                    pythonVersion = version,
+                    pythonBinaryPath = binEntry.name.removePrefix(prefix),
+                    fileCount = entries.size,
+                    totalBytes = entries.sumOf { if (it.size > 0) it.size else 0L },
+                    installedAt = 0L,
+                    sourceUrl = "bundled:$SHELL_ASSET_NAME",
+                )
+            }
+        } catch (error: Exception) {
+            null
+        }
+    }
+
+    private fun packageVersionCode(): Long = try {
+        val info = context.packageManager.getPackageInfo(context.packageName, 0)
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
+            info.longVersionCode
+        } else {
+            @Suppress("DEPRECATION")
+            info.versionCode.toLong()
+        }
+    } catch (error: Exception) {
+        0L
+    }
+
+    private fun encodeRuntimeInfo(info: RuntimeInfo): JSONObject = JSONObject().apply {
+        put("pythonVersion", info.pythonVersion)
+        put("pythonBinaryPath", info.pythonBinaryPath)
+        put("fileCount", info.fileCount)
+        put("totalBytes", info.totalBytes)
+        put("installedAt", info.installedAt)
+        put("sourceUrl", info.sourceUrl)
+    }
+
+    private fun decodeRuntimeInfo(json: JSONObject): RuntimeInfo = RuntimeInfo(
+        pythonVersion = json.optString("pythonVersion"),
+        pythonBinaryPath = json.optString("pythonBinaryPath"),
+        fileCount = json.optInt("fileCount"),
+        totalBytes = json.optLong("totalBytes"),
+        installedAt = json.optLong("installedAt"),
+        sourceUrl = json.optString("sourceUrl"),
+    )
 
     /**
      * The directory that directly contains `bin/` + `lib/` (identical to
@@ -513,6 +641,21 @@ class PythonRuntimeManager(
 
     companion object {
         const val DISTRO_DIR = "python-runtime-distro"
+
+        /** Shell template asset that carries the bundled runtime tree. */
+        const val SHELL_ASSET_NAME = "python_runtime_shell.apk"
+
+        /** Asset directory of the runtime inside the shell template APK. */
+        const val BUNDLED_ASSET_DIR = "python_runtime"
+
+        private const val PREFS_NAME = "factory_prefs"
+        private const val PREF_BUNDLED_PROBE = "bundled_python_runtime_probe"
+
+        /** `assets/python_runtime/bin/python3.x` inside the shell template. */
+        private val BIN_BINARY_REGEX = Regex("bin/python3(\\.\\d+)?$")
+
+        /** `assets/python_runtime/lib/libpython3.x.so` inside the shell. */
+        private val LIB_PYTHON_REGEX = Regex("lib/libpython3(\\.\\d+)?\\.so$")
 
         /** Files at or below this size are treated as packaged symlinks. */
         const val SYMLINK_TEXT_LIMIT = 256L

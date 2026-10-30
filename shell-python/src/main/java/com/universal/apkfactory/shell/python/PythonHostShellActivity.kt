@@ -36,18 +36,21 @@ import java.io.OutputStream
 import java.util.concurrent.atomic.AtomicBoolean
 
 /**
- * Python 3.12 ARM64 host shell (MODE_FAST_PYTHON target).
+ * Python 3 ARM64 host shell (MODE_FAST_PYTHON target).
  *
  * The patcher injects two asset trees into this shell:
  *
  *  * `assets/python_app/` — the user's program (normalized project zip:
  *    `main.py`, `requirements.txt`, local modules, ...),
- *  * `assets/python_runtime/` — a CPython 3 aarch64 distribution
- *    (provisioned at factory build time via the `downloadPythonRuntime`
- *    Gradle task; see shell-python/build.gradle.kts).
+ *  * `assets/python_runtime/` — a CPython aarch64 distribution bundled at
+ *    factory build time (CI provisions the CPython-for-Android release plus
+ *    a tiny NDK-compiled `Py_BytesMain` launcher at `bin/python3.x`; a
+ *    user-provisioned custom runtime replaces it at patch time).
  *
  * On first launch both trees are extracted into `filesDir` (extraction is
- * content-hash guarded so it runs once), then the interpreter is launched:
+ * content-hash guarded so it runs once), then — when the project ships a
+ * `requirements.txt` — its pure-Python packages are pip-installed into
+ * `site-packages/`, and finally the interpreter is launched:
  *
  * ```
  * /system/bin/linker64  <runtime>/bin/python3.12  -u  <entry>.py
@@ -256,6 +259,7 @@ class PythonHostShellActivity : Activity() {
                         "python  : ${pythonVersionOf(pythonBinary)}\n" +
                         "──────────────────────────────────────────────────\n"
                 )
+                installRequirementsIfNeeded(pythonBinary, appDir)
                 launchInterpreter(pythonBinary, appDir, entryFile)
             } catch (error: Exception) {
                 Log.e(TAG, "Python shell boot failed", error)
@@ -353,8 +357,8 @@ class PythonHostShellActivity : Activity() {
         ).ifEmpty { throw IOException("Python runtime has no bin/ directory.") }
 
         val preferred = listOf(
-            "python3.13", "python3.12", "python3.11", "python3.10",
-            "python3.9", "python3", "python"
+            "python3.15", "python3.14", "python3.13", "python3.12",
+            "python3.11", "python3.10", "python3.9", "python3", "python"
         )
         for (dir in searchDirs) {
             for (name in preferred) {
@@ -416,9 +420,95 @@ class PythonHostShellActivity : Activity() {
     /* Interpreter execution (linker64 W^X bypass)                         */
     /* ================================================================== */
 
-    private fun launchInterpreter(pythonBinary: File, appDir: File, entryFile: File) {
-        if (!processRunning.compareAndSet(false, true)) return
+    /**
+     * Installs the project's `requirements.txt` (when present) into
+     * `<appDir>/site-packages` using the pip bundled with the runtime.
+     * Pure-Python packages resolve straight from PyPI over HTTPS; packages
+     * that need compiled extension modules for android/aarch64 cannot be
+     * installed on-device — the failure is reported on the console and the
+     * program still launches. A marker file holding the requirements digest
+     * guards against re-installing on every launch.
+     */
+    private fun installRequirementsIfNeeded(pythonBinary: File, appDir: File) {
+        val requirements = File(appDir, "requirements.txt")
+        if (!requirements.isFile) return
+        val sitePackages = File(appDir, "site-packages")
+        val marker = File(appDir, ".pip-requirements-done")
+        val digest = try {
+            java.security.MessageDigest.getInstance("SHA-256")
+                .digest(requirements.readBytes())
+                .joinToString("") { byte -> "%02x".format(byte) }
+        } catch (error: IOException) {
+            return
+        }
+        if (marker.isFile && marker.readText().trim() == digest) {
+            postLog("[pip] requirements.txt already installed — skipping.\n")
+            return
+        }
+        postLog(
+            "[pip] requirements.txt found — installing pure-Python packages " +
+                "into site-packages (internet required, first launch only) …\n"
+        )
+        val command = listOf(
+            LINKER64,
+            pythonBinary.absolutePath,
+            "-m", "pip", "install",
+            "--no-input", "--disable-pip-version-check", "--no-compile",
+            "--timeout", "30", "--retries", "2",
+            "--target", sitePackages.absolutePath,
+            "--requirement", "requirements.txt",
+        )
+        try {
+            val proc = ProcessBuilder(command).apply {
+                directory(appDir)
+                environment().apply {
+                    putAll(buildPythonEnvironment(pythonBinary, appDir))
+                    put("PIP_ROOT_USER_ACTION", "ignore")
+                }
+            }.start()
+            val stderrPump = Thread({
+                try {
+                    proc.errorStream.buffered().use { input ->
+                        input.bufferedReader().forEachLine { postLog("[pip] $it\n") }
+                    }
+                } catch (error: IOException) {
+                    // Stream closed with the process — expected on exit.
+                }
+            }, "pip-stderr").also { it.start() }
+            try {
+                proc.inputStream.buffered().use { input ->
+                    input.bufferedReader().forEachLine { postLog("[pip] $it\n") }
+                }
+            } catch (error: IOException) {
+                // Stream closed with the process — expected on exit.
+            }
+            val exitCode = proc.waitFor()
+            stderrPump.join(5_000)
+            if (exitCode == 0) {
+                marker.writeText(digest)
+                postLog("[pip] requirements installed ✓\n\n")
+            } else {
+                postLog(
+                    "[pip] WARNING: pip exited with code $exitCode — packages " +
+                        "that need compiled (non-pure-Python) wheels cannot be " +
+                        "installed on-device. Launching anyway.\n\n"
+                )
+            }
+        } catch (error: IOException) {
+            postLog(
+                "[pip] WARNING: could not run pip (${error.message}) — " +
+                    "launching anyway.\n\n"
+            )
+        }
+    }
 
+    /**
+     * The environment shared by every interpreter launch (program or pip):
+     * library paths for the linker64 W^X bypass, the runtime's own bin/ on
+     * PATH, and PYTHONPATH covering the app dir plus the pip-installed
+     * site-packages.
+     */
+    private fun buildPythonEnvironment(pythonBinary: File, appDir: File): Map<String, String> {
         val runtimeRoot = pythonBinary.parentFile?.parentFile // <runtime>/
             ?: filesDir
         val libDir = File(runtimeRoot, "lib")
@@ -436,6 +526,29 @@ class PythonHostShellActivity : Activity() {
 
         val homeDir = File(filesDir, "home").apply { mkdirs() }
         val tmpDir = File(cacheDir, "tmp").apply { mkdirs() }
+        val sitePackages = File(appDir, "site-packages")
+        val pythonPath = if (sitePackages.isDirectory) {
+            "${appDir.absolutePath}:${sitePackages.absolutePath}"
+        } else {
+            appDir.absolutePath
+        }
+
+        return mapOf(
+            "HOME" to homeDir.absolutePath,
+            "PATH" to "${File(runtimeRoot, "bin").absolutePath}:/system/bin",
+            "LD_LIBRARY_PATH" to ldLibraryPath,
+            "TMPDIR" to tmpDir.absolutePath,
+            "PYTHONHOME" to runtimeRoot.absolutePath,
+            "PYTHONPATH" to pythonPath,
+            "PYTHONUNBUFFERED" to "1",
+            "PYTHONIOENCODING" to "utf-8",
+            "PYTHONDONTWRITEBYTECODE" to "1",
+            "SSL_CERT_DIR" to "/system/etc/security/cacerts",
+        )
+    }
+
+    private fun launchInterpreter(pythonBinary: File, appDir: File, entryFile: File) {
+        if (!processRunning.compareAndSet(false, true)) return
 
         val command = listOf(
             LINKER64,
@@ -447,16 +560,7 @@ class PythonHostShellActivity : Activity() {
         val builder = ProcessBuilder(command).apply {
             directory(appDir)
             environment().apply {
-                put("HOME", homeDir.absolutePath)
-                put("PATH", "${File(runtimeRoot, "bin").absolutePath}:/system/bin")
-                put("LD_LIBRARY_PATH", ldLibraryPath)
-                put("TMPDIR", tmpDir.absolutePath)
-                put("PYTHONHOME", runtimeRoot.absolutePath)
-                put("PYTHONPATH", appDir.absolutePath)
-                put("PYTHONUNBUFFERED", "1")
-                put("PYTHONIOENCODING", "utf-8")
-                put("PYTHONDONTWRITEBYTECODE", "1")
-                put("SSL_CERT_DIR", "/system/etc/security/cacerts")
+                putAll(buildPythonEnvironment(pythonBinary, appDir))
             }
         }
 

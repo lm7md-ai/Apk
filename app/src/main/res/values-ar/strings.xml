@@ -154,6 +154,11 @@
     <string name="label_sha256">SHA-256 (موصى به)</string>
     <string name="python_install">تنزيل وتثبيت</string>
     <string name="python_remove">إزالة البيئة</string>
+    <string name="python_bundled_badge">مضمّنة — تعمل فور التثبيت</string>
+    <string name="python_bundled_desc">توزيعة CPython لمعمارية arm64 تأتي داخل المصنع نفسه: مشاريع Python تُبنى في ثوانٍ بلا أي إعداد، وتُثبَّت حزم requirements.txt (النقية بلغة Python) تلقائياً عند أول تشغيل للتطبيق.</string>
+    <string name="python_custom_note">هذه البيئة المخصصة تستبدل المضمّنة في جميع البناءات اللاحقة.</string>
+    <string name="python_advanced_show">خيارات متقدمة: تثبيت بيئة مخصصة</string>
+    <string name="python_advanced_hide">إخفاء الخيارات المتقدمة</string>
 
     <!-- Keystores & Cloud -->
     <string name="pat_title">رمز الوصول الشخصي لـ GitHub</string>

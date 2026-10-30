@@ -154,6 +154,11 @@
     <string name="label_sha256">SHA-256 (recommended)</string>
     <string name="python_install">Download &amp; install</string>
     <string name="python_remove">Remove runtime</string>
+    <string name="python_bundled_badge">Bundled — works out of the box</string>
+    <string name="python_bundled_desc">CPython for arm64 ships inside the factory: Python projects build in seconds with zero setup, and requirements.txt packages (pure-Python) are installed automatically on the app\'s first launch.</string>
+    <string name="python_custom_note">This custom runtime overrides the bundled one in all subsequent builds.</string>
+    <string name="python_advanced_show">Advanced: install a custom runtime</string>
+    <string name="python_advanced_hide">Hide advanced options</string>
 
     <!-- Keystores & Cloud -->
     <string name="pat_title">GitHub Personal Access Token</string>

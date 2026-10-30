@@ -33,12 +33,14 @@ import com.universal.apkfactory.di.ServiceLocator
 import com.universal.apkfactory.engine.cloud.GitHubCloudBuilder
 import com.universal.apkfactory.engine.gradle.NativeGradleService
 import com.universal.apkfactory.engine.gradle.ToolchainManager
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.File
 
 /**
@@ -91,6 +93,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val diagnosis: BuildFailureAnalyzer.FailureDiagnosis? = null,
         /** Provisioned CPython runtime, when installed. */
         val pythonRuntime: PythonRuntimeManager.RuntimeInfo? = null,
+        /**
+         * True when [pythonRuntime] describes the CPython distribution
+         * bundled inside the shell template asset (not a user-installed
+         * one) — MODE_FAST_PYTHON is ready out of the box.
+         */
+        val pythonRuntimeBundled: Boolean = false,
         val pythonRuntimeBusy: Boolean = false,
         val pythonRuntimeProgress: String? = null,
     )
@@ -451,13 +459,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 _state.update {
                     it.copy(
                         pythonRuntime = info,
+                        pythonRuntimeBundled = false,
                         pythonRuntimeBusy = false,
                         pythonRuntimeProgress = null,
                     )
                 }
                 appendLog(
                     "Python ${info.pythonVersion} runtime installed — " +
-                        "${info.fileCount} files, ${info.displaySize}."
+                        "${info.fileCount} files, ${info.displaySize}. " +
+                        "It overrides the bundled runtime in future builds."
                 )
             } catch (error: Exception) {
                 appendLog("ERROR: ${error.message}")
@@ -473,13 +483,36 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun clearPythonRuntime() {
-        graph.pythonRuntimeManager.clear()
-        _state.update { it.copy(pythonRuntime = null) }
-        appendLog("Python runtime removed.")
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) { graph.pythonRuntimeManager.clear() }
+            appendLog("Custom Python runtime removed — falling back to the bundled one.")
+            refreshPythonRuntime()
+        }
     }
 
+    /**
+     * Refreshes the Python runtime status: a user-installed distro wins;
+     * otherwise the runtime bundled inside the shell template (v5+) is
+     * reported so the UI can present MODE_FAST_PYTHON as ready out of the
+     * box. The bundled probe touches the shell APK on disk, so it runs on
+     * Dispatchers.IO.
+     */
     private fun refreshPythonRuntime() {
-        _state.update { it.copy(pythonRuntime = graph.pythonRuntimeManager.info()) }
+        viewModelScope.launch {
+            val installed = withContext(Dispatchers.IO) { graph.pythonRuntimeManager.info() }
+            if (installed != null) {
+                _state.update {
+                    it.copy(pythonRuntime = installed, pythonRuntimeBundled = false)
+                }
+                return@launch
+            }
+            val bundled = withContext(Dispatchers.IO) {
+                graph.pythonRuntimeManager.bundledRuntimeInfo()
+            }
+            _state.update {
+                it.copy(pythonRuntime = bundled, pythonRuntimeBundled = bundled != null)
+            }
+        }
     }
 
     fun dismissError() {

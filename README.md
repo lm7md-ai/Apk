@@ -156,15 +156,46 @@ Every failed build is analyzed by `core-diag/BuildFailureAnalyzer`:
   English log excerpts, full build context) with one-tap *Copy* / *Share* —
   paste it into any AI assistant for a deeper fix.
 
-## Python runtime provisioning
+## Python runtime — bundled since v5
 
-`MODE_FAST_PYTHON` is fully enabled at runtime: the configuration screen
-offers a **Python runtime** card that downloads a CPython aarch64-android
-distribution (tar.gz / zip, AndroidIDE or Termux style) with SHA-256
-verification, extracts it (preserving symlinks through the packaged
-text-symlink convention the shell resolves at first launch), and injects it
-under `assets/python_runtime/` of every generated app. Without a runtime the
-build still succeeds — the generated app shows a setup notice.
+**The factory APK ships with a complete CPython aarch64-android runtime.**
+`MODE_FAST_PYTHON` works out of the box: zero downloads, zero setup, and
+Python projects turn into installable APKs in seconds (pure patching — no
+compilation). On top of that:
+
+* **`requirements.txt` support** — generated apps pip-install the project's
+  pure-Python packages from PyPI into `site-packages/` on first launch
+  (internet required once; compiled extension wheels are reported and
+  skipped — the app still runs).
+* **Custom runtime override** — the configuration screen's **Python runtime**
+  card can still download any CPython aarch64-android distribution
+  (tar.gz / zip, AndroidIDE or Termux style) with SHA-256 verification; a
+  custom runtime fully replaces the bundled tree in subsequent builds
+  (`removeDir` + re-injection at patch time).
+
+### How the bundle is built (CI)
+
+CI (`.github/workflows/build-apk.yml`) provisions the runtime into
+`:shell-python` before every Gradle build:
+
+1. downloads the pinned CPython-for-Android release
+   ([Sportacandy/cpython-android-prebuilt](https://github.com/Sportacandy/cpython-android-prebuilt),
+   built with CPython's official `Platforms/Android` support — PSF license),
+   verifying its SHA-256;
+2. copies the `lib/` tree (libpython + stdlib + OpenSSL/SQLite), stripping
+   the test suite and GUI-only modules;
+3. compiles `shell-python/launcher/python_launcher.c` — a 3-line
+   `Py_BytesMain` launcher, the exact entry point of the real interpreter —
+   with the Android NDK for aarch64 (16 KiB page-aligned) into
+   `bin/python3.x`, because CPython's Android packaging is embedding-only
+   and ships no executable;
+4. bundles the tree as `assets/python_runtime/` of the python shell
+   template. The factory reports it via `PythonRuntimeManager.bundledRuntimeInfo()`
+   (probe cached per app version).
+
+At app first launch the shell extracts the tree once, resolves packaged
+text-symlinks, and runs the interpreter through `/system/bin/linker64`
+(Termux/AndroidIDE W^X bypass).
 
 ## Building
 
@@ -180,9 +211,11 @@ The build automatically:
 3. downloads the AndroidIDE aarch64 aapt2 and packages it as `app/src/main/jniLibs/arm64-v8a/libaapt2.so` (override the URL with `-PapkfactoryAapt2Url=<tar.xz>`; skipped when the file already exists),
 4. builds the factory APK with both shells and the aapt2 runtime embedded.
 
-### Provisioning the Python runtime (optional, for MODE_FAST_PYTHON)
+### Provisioning a custom Python runtime (optional override)
 
-The Python shell needs a CPython 3 aarch64-android distribution (`bin/python3.1x` + `lib/libpython3.1x.so` layout). Bundle one from any source you trust:
+Locally (or to override the CI bundle), bundle any CPython 3 aarch64-android
+distribution (`bin/python3.1x` + `lib/libpython3.1x.so` layout) from a source
+you trust:
 
 ```bash
 ./gradlew :shell-python:downloadPythonRuntime \

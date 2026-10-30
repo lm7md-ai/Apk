@@ -12,8 +12,102 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      # CPython aarch64-android distribution (libpython + stdlib, built with
+      # CPython's official Android support by Sportacandy/cpython-android-prebuilt,
+      # PSF-licensed). CI adds the missing bin/python3.x launcher (NDK) and
+      # bundles the tree into :shell-python so MODE_FAST_PYTHON works with
+      # zero user setup. SHA-256 pinned below after the probe run.
+      PYTHON_RUNTIME_URL: https://github.com/Sportacandy/cpython-android-prebuilt/releases/download/v3.14.7/python-3.14.7-aarch64-linux-android.tar.gz
+      PYTHON_RUNTIME_SHA256: ""
     steps:
       - uses: actions/checkout@v4
+
+      - name: Provision bundled CPython runtime into :shell-python
+        run: |
+          set -euo pipefail
+          ANDROID_HOME="${ANDROID_HOME:-/usr/local/lib/android/sdk}"
+          export ANDROID_HOME
+          STAGE="$RUNNER_TEMP/python-stage"
+          DEST="$GITHUB_WORKSPACE/shell-python/src/main/assets/python_runtime"
+          ARCHIVE="$RUNNER_TEMP/python-runtime.tar.gz"
+          mkdir -p "$STAGE"
+          rm -rf "$DEST"
+          mkdir -p "$DEST/bin" "$DEST/lib"
+
+          echo "::group::Download CPython aarch64-android"
+          curl -fsSL "$PYTHON_RUNTIME_URL" -o "$ARCHIVE"
+          ACTUAL_SHA=$(sha256sum "$ARCHIVE" | cut -d' ' -f1)
+          echo "archive sha256 : $ACTUAL_SHA"
+          echo "archive size   : $(du -h "$ARCHIVE" | cut -f1)"
+          if [ -n "$PYTHON_RUNTIME_SHA256" ]; then
+            if [ "$ACTUAL_SHA" != "$PYTHON_RUNTIME_SHA256" ]; then
+              echo "SHA-256 mismatch! expected $PYTHON_RUNTIME_SHA256"; exit 1
+            fi
+            echo "SHA-256 verified."
+          else
+            echo "PROBE RUN: PYTHON_RUNTIME_SHA256 is not pinned yet."
+          fi
+          tar -xzf "$ARCHIVE" -C "$STAGE"
+          echo "archive top-level entries:"; ls -1 "$STAGE"
+          echo "::endgroup::"
+
+          echo "::group::Locate the interpreter layout"
+          LIBPYTHON=$(find "$STAGE" -type f -name 'libpython3*.so' | head -1)
+          if [ -z "$LIBPYTHON" ]; then
+            echo "libpython3*.so not found in the archive"; exit 1
+          fi
+          ROOT=$(dirname "$(dirname "$LIBPYTHON")")
+          PYVER=$(basename "$LIBPYTHON" | sed -e 's/^libpython//' -e 's/\.so$//')
+          echo "content root   : $ROOT"
+          echo "python version : $PYVER"
+          echo "lib/ entries:"; ls -1 "$ROOT/lib" | head -20
+          echo "::endgroup::"
+
+          echo "::group::Copy the runtime tree (lib + bin only)"
+          # -L dereferences symlinks: APK assets cannot be symlinks.
+          cp -rL "$ROOT/lib/." "$DEST/lib/"
+          if [ -d "$ROOT/bin" ]; then cp -rL "$ROOT/bin/." "$DEST/bin/"; fi
+          # Drop heavy / GUI-only / build-only stdlib parts.
+          rm -rf "$DEST/lib/python$PYVER/test" \
+                 "$DEST/lib/python$PYVER/tests" \
+                 "$DEST/lib/python$PYVER/idlelib" \
+                 "$DEST/lib/python$PYVER/tkinter" \
+                 "$DEST/lib/python$PYVER/turtledemo" \
+                 "$DEST/lib/pkgconfig"
+          find "$DEST" -name '__pycache__' -type d -prune -exec rm -rf {} +
+          if [ -n "$(find "$DEST" -type l)" ]; then
+            echo "symlinks leaked into the asset tree:"; find "$DEST" -type l; exit 1
+          fi
+          echo "::endgroup::"
+
+          echo "::group::Compile the python3 launcher (NDK aarch64)"
+          if [ -z "$(ls -A "$ANDROID_HOME/ndk" 2>/dev/null)" ]; then
+            yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
+            "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "ndk;27.2.12479018" > /dev/null
+          fi
+          NDK_VERSION=$(ls "$ANDROID_HOME/ndk" | sort -V | tail -1)
+          CC="$ANDROID_HOME/ndk/$NDK_VERSION/toolchains/llvm/prebuilt/linux-x86_64/bin/clang"
+          echo "using NDK $NDK_VERSION"
+          "$CC" --target=aarch64-linux-android26 \
+                -I"$ROOT/include/python$PYVER" \
+                -o "$DEST/bin/python$PYVER" \
+                "$GITHUB_WORKSPACE/shell-python/launcher/python_launcher.c" \
+                -L"$ROOT/lib" -lpython"$PYVER" \
+                -Os -fPIE -pie -Wl,-O1 -Wl,-z,max-page-size=16384
+          echo "::endgroup::"
+
+          echo "::group::Sanity checks"
+          readelf -h "$DEST/bin/python$PYVER" | grep -E 'Class:.*ELF64'
+          readelf -h "$DEST/bin/python$PYVER" | grep -E 'Machine:.*AArch64'
+          echo "NEEDED entries:"; readelf -d "$DEST/bin/python$PYVER" | grep NEEDED || true
+          test -f "$DEST/lib/libpython$PYVER.so"
+          test -f "$DEST/lib/python$PYVER/os.py"
+          echo "bundled files : $(find "$DEST" -type f | wc -l)"
+          echo "bundled size  : $(du -sh "$DEST" | cut -f1)"
+          echo "bin/ contents : $(ls "$DEST/bin")"
+          echo "PYTHON_BUNDLED_VERSION=$PYVER" >> "$GITHUB_ENV"
+          echo "::endgroup::"
 
       - uses: actions/setup-java@v4
         with:
@@ -34,7 +128,10 @@ jobs:
             grep -nE "^e: |error: |FAILURE:|What went wrong|Caused by|Execution failed" gradle-build.log | head -120 || true
             echo ""
             echo "===== last 200 lines of gradle output ====="
-            tail -200 gradle-build.log
+            tail -200 gradle-build.log || true
+            echo ""
+            echo "===== ls of provisioned python runtime (if any) ====="
+            find shell-python/src/main/assets/python_runtime -maxdepth 2 2>/dev/null | head -30 || true
           } > build-failure.log
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"

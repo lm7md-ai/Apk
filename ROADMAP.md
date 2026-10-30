@@ -26,8 +26,11 @@ Ideas ordered by impact; anything unchecked is open for contribution.
 
 - [ ] **Shell extensions store** — camera, geolocation, notifications,
       file-system bridges injected as opt-in permissions in `shell_config.json`.
-- [ ] **Python pip support** — resolve `requirements.txt` at build time
-      (pure-python wheels) into the bundled runtime.
+- [x] **Python pip support** — the Python shell pip-installs the project's
+      `requirements.txt` (pure-Python packages) into `site-packages/` on the
+      app's first launch; a digest marker avoids re-installs. *(v5 — together
+      with the CPython runtime bundled into the factory APK, which removed
+      the manual provisioning step entirely.)*
 - [ ] **Live reload** — ADB/Wi-Fi shell reload for fast iteration while
       developing the web payload.
 - [ ] **V8/QuickJS shell** — a JavaScript-native shell for JS-only apps.
