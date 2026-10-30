@@ -422,12 +422,15 @@ class PythonHostShellActivity : Activity() {
 
     /**
      * Installs the project's `requirements.txt` (when present) into
-     * `<appDir>/site-packages` using the pip bundled with the runtime.
-     * Pure-Python packages resolve straight from PyPI over HTTPS; packages
-     * that need compiled extension modules for android/aarch64 cannot be
-     * installed on-device — the failure is reported on the console and the
-     * program still launches. A marker file holding the requirements digest
-     * guards against re-installing on every launch.
+     * `<appDir>/site-packages` using the pip bundled with the runtime
+     * (CI extracts the official pip wheel into the runtime's site-packages;
+     * for custom runtimes pip is bootstrapped through ensurepip when
+     * possible). Pure-Python packages resolve straight from PyPI over
+     * HTTPS; packages that need compiled extension modules for
+     * android/aarch64 cannot be installed on-device — the failure is
+     * reported on the console and the program still launches. A marker file
+     * holding the requirements digest guards against re-installing on
+     * every launch.
      */
     private fun installRequirementsIfNeeded(pythonBinary: File, appDir: File) {
         val requirements = File(appDir, "requirements.txt")
@@ -449,21 +452,62 @@ class PythonHostShellActivity : Activity() {
             "[pip] requirements.txt found — installing pure-Python packages " +
                 "into site-packages (internet required, first launch only) …\n"
         )
-        val command = listOf(
-            LINKER64,
-            pythonBinary.absolutePath,
+        val installArgs = listOf(
             "-m", "pip", "install",
             "--no-input", "--disable-pip-version-check", "--no-compile",
             "--timeout", "30", "--retries", "2",
             "--target", sitePackages.absolutePath,
             "--requirement", "requirements.txt",
         )
-        try {
+        var exitCode = runInterpreterCommand(
+            pythonBinary, appDir, installArgs, pipEnvironment = true
+        )
+        if (exitCode != 0) {
+            // The bundled runtime ships pip already; a custom runtime might
+            // not — bootstrap it through ensurepip and retry once.
+            postLog("[pip] pip unavailable — trying ensurepip bootstrap …\n")
+            val bootstrap = runInterpreterCommand(
+                pythonBinary, appDir,
+                listOf("-m", "ensurepip", "--upgrade"),
+                pipEnvironment = true,
+            )
+            if (bootstrap == 0) {
+                exitCode = runInterpreterCommand(
+                    pythonBinary, appDir, installArgs, pipEnvironment = true
+                )
+            }
+        }
+        if (exitCode == 0) {
+            marker.writeText(digest)
+            postLog("[pip] requirements installed ✓\n\n")
+        } else {
+            postLog(
+                "[pip] WARNING: pip exited with code $exitCode — packages " +
+                    "that need compiled (non-pure-Python) wheels cannot be " +
+                    "installed on-device. Launching anyway.\n\n"
+            )
+        }
+    }
+
+    /**
+     * Runs `linker64 <python> <args…>` inside [appDir] with the shared
+     * Python environment, streaming stdout/stderr to the console. Returns
+     * the process exit code, or a non-zero sentinel when the process could
+     * not be started at all.
+     */
+    private fun runInterpreterCommand(
+        pythonBinary: File,
+        appDir: File,
+        args: List<String>,
+        pipEnvironment: Boolean,
+    ): Int {
+        val command = listOf(LINKER64, pythonBinary.absolutePath) + args
+        return try {
             val proc = ProcessBuilder(command).apply {
                 directory(appDir)
                 environment().apply {
                     putAll(buildPythonEnvironment(pythonBinary, appDir))
-                    put("PIP_ROOT_USER_ACTION", "ignore")
+                    if (pipEnvironment) put("PIP_ROOT_USER_ACTION", "ignore")
                 }
             }.start()
             val stderrPump = Thread({
@@ -484,21 +528,10 @@ class PythonHostShellActivity : Activity() {
             }
             val exitCode = proc.waitFor()
             stderrPump.join(5_000)
-            if (exitCode == 0) {
-                marker.writeText(digest)
-                postLog("[pip] requirements installed ✓\n\n")
-            } else {
-                postLog(
-                    "[pip] WARNING: pip exited with code $exitCode — packages " +
-                        "that need compiled (non-pure-Python) wheels cannot be " +
-                        "installed on-device. Launching anyway.\n\n"
-                )
-            }
+            exitCode
         } catch (error: IOException) {
-            postLog(
-                "[pip] WARNING: could not run pip (${error.message}) — " +
-                    "launching anyway.\n\n"
-            )
+            postLog("[pip] WARNING: could not launch the interpreter (${error.message}).\n")
+            -1
         }
     }
 

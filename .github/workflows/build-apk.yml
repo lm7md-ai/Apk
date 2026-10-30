@@ -17,9 +17,14 @@ jobs:
       # CPython's official Android support by Sportacandy/cpython-android-prebuilt,
       # PSF-licensed). CI adds the missing bin/python3.x launcher (NDK) and
       # bundles the tree into :shell-python so MODE_FAST_PYTHON works with
-      # zero user setup. SHA-256 pinned below after the probe run.
+      # zero user setup. SHA-256 pinned (verified against the probe run).
       PYTHON_RUNTIME_URL: https://github.com/Sportacandy/cpython-android-prebuilt/releases/download/v3.14.7/python-3.14.7-aarch64-linux-android.tar.gz
-      PYTHON_RUNTIME_SHA256: ""
+      PYTHON_RUNTIME_SHA256: 492cdd80ebab2a1374d0749167ebed06465aa0d08430c30de183f2f113d20451
+      # Official pip wheel (self-contained, vendored deps + CA bundle) bundled
+      # into the runtime's site-packages — the CPython android package ships
+      # neither pip nor ensurepip wheels.
+      PIP_WHEEL_URL: https://files.pythonhosted.org/packages/3f/06/3e4420302363fbb71be3c7f35ce042f54bfca330e3e66b3a2e3c4cca579f/pip-26.2.2-py3-none-any.whl
+      PIP_WHEEL_SHA256: fd7f4dfa8190e014013b9f08f3e973f4e4c26ffd179a204895533a7254813a70
     steps:
       - uses: actions/checkout@v4
 
@@ -79,6 +84,17 @@ jobs:
           if [ -n "$(find "$DEST" -type l)" ]; then
             echo "symlinks leaked into the asset tree:"; find "$DEST" -type l; exit 1
           fi
+          echo "::endgroup::"
+
+          echo "::group::Bundle pip into the runtime site-packages"
+          PIP_WHL="$RUNNER_TEMP/pip.whl"
+          curl -fsSL "$PIP_WHEEL_URL" -o "$PIP_WHL"
+          echo "$PIP_WHEEL_SHA256  $PIP_WHL" | sha256sum -c -
+          SITE_PKGS="$DEST/lib/python$PYVER/site-packages"
+          mkdir -p "$SITE_PKGS"
+          unzip -q -o "$PIP_WHL" -d "$SITE_PKGS"
+          test -f "$SITE_PKGS/pip/__init__.py"
+          echo "pip wheel extracted into site-packages ($(find "$SITE_PKGS" -type f | wc -l) files)."
           echo "::endgroup::"
 
           echo "::group::Compile the python3 launcher (NDK aarch64)"

@@ -184,12 +184,16 @@ CI (`.github/workflows/build-apk.yml`) provisions the runtime into
    verifying its SHA-256;
 2. copies the `lib/` tree (libpython + stdlib + OpenSSL/SQLite), stripping
    the test suite and GUI-only modules;
-3. compiles `shell-python/launcher/python_launcher.c` — a 3-line
+3. extracts the official **pip wheel** (pinned, SHA-256 verified,
+   self-contained with vendored dependencies + CA bundle) into the runtime's
+   `site-packages/` — the CPython Android package ships neither pip nor
+   ensurepip wheels;
+4. compiles `shell-python/launcher/python_launcher.c` — a 3-line
    `Py_BytesMain` launcher, the exact entry point of the real interpreter —
    with the Android NDK for aarch64 (16 KiB page-aligned) into
    `bin/python3.x`, because CPython's Android packaging is embedding-only
    and ships no executable;
-4. bundles the tree as `assets/python_runtime/` of the python shell
+5. bundles the tree as `assets/python_runtime/` of the python shell
    template. The factory reports it via `PythonRuntimeManager.bundledRuntimeInfo()`
    (probe cached per app version).
 
