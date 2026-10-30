@@ -1,10 +1,9 @@
 name: Build APK
 
-# Push-triggered on this branch. The retrieval step commits build output
-# back via the github-actions bot, whose pushes do NOT re-trigger workflows.
+# Manual dispatch only. Push-triggering was disabled after the initial
+# bring-up: the retrieval step commits build output back to the branch, and
+# branch-maintenance pushes (resetting that output) would re-trigger builds.
 on:
-  push:
-    branches: [arena/5e3c22cc-apk]
   workflow_dispatch:
 
 permissions:
