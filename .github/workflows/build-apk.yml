@@ -4,8 +4,6 @@ name: Build APK
 # burst: the retrieval step commits build output back to the branch, and
 # branch-maintenance pushes (resetting that output) would re-trigger builds.
 on:
-  push:
-    branches: [arena/5e3c22cc-apk]
   workflow_dispatch:
 
 permissions:
