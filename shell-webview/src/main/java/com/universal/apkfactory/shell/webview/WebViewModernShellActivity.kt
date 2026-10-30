@@ -227,11 +227,9 @@ class WebViewModernShellActivity : Activity() {
         ): WebResourceResponse? {
             // WebViewAssetLoader handles only requests for its own domain and
             // passes everything else back to the WebView unchanged. The
-            // platform WebResourceRequest is adapted to the loader's
-            // WebRequest interface first.
-            return assetLoader.intercept(
-                WebViewAssetLoader.WebRequestAdapter(request)
-            )
+            // public entry point takes the request Uri (verified against the
+            // androidx.webkit source: shouldInterceptRequest(Uri)).
+            return assetLoader.shouldInterceptRequest(request.url)
         }
 
         override fun shouldOverrideUrlLoading(
