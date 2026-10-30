@@ -129,11 +129,13 @@
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/file_paths" />
         </provider>
+    </application>
 
-        <!-- Android 11+ package visibility: allow resolving external browsers
-             for URLs opened from the WebView shell preview and cloud links,
-             and the system package installer used by the FileProvider
-             fallback install path. -->
+    <!-- Android 11+ package visibility: allow resolving external
+         browsers for URLs opened from the WebView shell preview and cloud
+         links, and the system package installer used by the FileProvider
+         fallback install path. Must be a direct child of <manifest>. -->
+
         <queries>
             <intent>
                 <action android:name="android.intent.action.VIEW" />
@@ -148,5 +150,4 @@
                 <data android:mimeType="application/vnd.android.package-archive" />
             </intent>
         </queries>
-    </application>
 </manifest>
