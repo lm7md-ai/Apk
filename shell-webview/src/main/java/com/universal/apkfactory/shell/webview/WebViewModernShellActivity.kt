@@ -226,8 +226,12 @@ class WebViewModernShellActivity : Activity() {
             request: WebResourceRequest,
         ): WebResourceResponse? {
             // WebViewAssetLoader handles only requests for its own domain and
-            // passes everything else back to the WebView unchanged.
-            return assetLoader.intercept(request)
+            // passes everything else back to the WebView unchanged. The
+            // platform WebResourceRequest is adapted to the loader's
+            // WebRequest interface first.
+            return assetLoader.intercept(
+                WebViewAssetLoader.WebRequestAdapter(request)
+            )
         }
 
         override fun shouldOverrideUrlLoading(

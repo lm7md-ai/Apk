@@ -399,13 +399,11 @@ class PythonHostShellActivity : Activity() {
         ) {
             return file // looks like binary/text content, not a link
         }
-        val target = File(
-            if (targetPath.startsWith("/")) {
-                File(root, targetPath.removePrefix("/"))
-            } else {
-                File(file.parentFile ?: root, targetPath)
-            }
-        )
+        val target = if (targetPath.startsWith("/")) {
+            File(root, targetPath.removePrefix("/"))
+        } else {
+            File(file.parentFile ?: root, targetPath)
+        }
         return if (target.isFile) followPackagedSymlink(target, root, depth + 1) else null
     }
 
