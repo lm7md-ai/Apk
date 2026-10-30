@@ -156,6 +156,29 @@ Every failed build is analyzed by `core-diag/BuildFailureAnalyzer`:
   English log excerpts, full build context) with one-tap *Copy* / *Share* —
   paste it into any AI assistant for a deeper fix.
 
+## Self-healing builds — auto-repair (v6)
+
+The factory never gives up on the first error. `BuildAutoRepairEngine`
+(`core/diag`) runs in two places:
+
+1. **Pre-flight (before the first attempt)** — silently fixes what is
+   fixable and logs every change: an invalid Android package id is
+   rewritten to a valid one, broken version fields are reset, a missing
+   Python entry is re-detected (`main.py` → best `.py` candidate), a
+   missing web entry falls back to the best `.html` candidate.
+2. **Failure-driven (between automatic retries)** — the failed attempt is
+   matched against repair rules, the inputs are repaired and the build
+   **retries automatically (up to 3 attempts)**: an icon that cannot be
+   rendered is dropped in favor of the default, an APK nested inside a
+   zip is extracted and used directly, transient network errors are
+   retried after a 5 s backoff.
+
+Everything the engine fixed is shown live on the Build screen in an amber
+**Auto-repair** card, written to the terminal log, and — when the retries
+are exhausted — embedded as a dedicated section of the AI prompt ("what
+the app already tried — do not suggest it again") so any assistant goes
+straight to the real root cause.
+
 ## Python runtime — bundled since v5
 
 **The factory APK ships with a complete CPython aarch64-android runtime.**

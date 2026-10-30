@@ -160,6 +160,11 @@
     <string name="python_advanced_show">Advanced: install a custom runtime</string>
     <string name="python_advanced_hide">Hide advanced options</string>
 
+    <!-- Auto-repair engine (v6) -->
+    <string name="repair_title">Auto-repair</string>
+    <string name="repair_retrying">Fixed — retrying the build automatically …</string>
+    <string name="repair_exhausted">No further automatic fix was possible — see the diagnosis and the ready AI prompt below.</string>
+
     <!-- Keystores & Cloud -->
     <string name="pat_title">GitHub Personal Access Token</string>
     <string name="pat_sub">Needed for cloud builds and repository ingestion</string>

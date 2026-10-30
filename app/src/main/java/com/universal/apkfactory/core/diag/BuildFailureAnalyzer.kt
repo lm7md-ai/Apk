@@ -77,12 +77,16 @@ object BuildFailureAnalyzer {
      * @param phaseName name of the UI phase that failed (e.g. `CLOUD_BUILDING`).
      * @param error the exception thrown, if any.
      * @param logs the full terminal log captured so far.
+     * @param repairHistory everything the auto-repair engine already tried
+     *   (v6) — embedded in the AI prompt so the assistant does not suggest
+     *   what was already attempted.
      */
     fun analyze(
         mode: BuildMode?,
         phaseName: String,
         error: Throwable?,
         logs: List<BuildLogLine>,
+        repairHistory: List<String> = emptyList(),
     ): FailureDiagnosis {
         val errorText = error?.message.orEmpty()
         val logTail = logs.takeLast(LOG_TAIL_LINES).joinToString("\n") { it.message }
@@ -99,6 +103,7 @@ object BuildFailureAnalyzer {
             evidence = evidence,
             rule = rule,
             runUrl = runUrl,
+            repairHistory = repairHistory,
         )
 
         return FailureDiagnosis(
@@ -387,6 +392,7 @@ object BuildFailureAnalyzer {
         evidence: List<String>,
         rule: Rule,
         runUrl: String?,
+        repairHistory: List<String> = emptyList(),
     ): String = buildString {
         appendLine("## 🐞 مشكلة في بناء تطبيق — أحتاج مساعدتك في حلها")
         appendLine()
@@ -414,7 +420,15 @@ object BuildFailureAnalyzer {
             appendLine("- سجل التشغيل السحابي (GitHub Actions): $runUrl")
         }
         appendLine()
-        appendLine("### 4) مقتطف من سجل البناء (حرفي، كما ظهر)")
+        if (repairHistory.isNotEmpty()) {
+            appendLine("### 4) ما حاول التطبيق إصلاحه تلقائياً (وفشل)")
+            appendLine("جرت هذه المحاولات قبل الوصول إليك — **لا تقترحها مجدداً**:")
+            repairHistory.forEach { attempt ->
+                appendLine("- $attempt")
+            }
+            appendLine()
+        }
+        appendLine("### ${if (repairHistory.isEmpty()) 4 else 5}) مقتطف من سجل البناء (حرفي، كما ظهر)")
         appendLine("```text")
         if (evidence.isEmpty()) {
             appendLine("(السجل فارغ)")
@@ -423,7 +437,7 @@ object BuildFailureAnalyzer {
         }
         appendLine("```")
         appendLine()
-        appendLine("### 5) المطلوب منك")
+        appendLine("### ${if (repairHistory.isEmpty()) 5 else 6}) المطلوب منك")
         appendLine("1. حدّد **السبب الجذري** للفشل بدقة.")
         appendLine("2. أعطني **خطوات إصلاح عملية مرتبة** أستطيع تنفيذها من هاتفي.")
         appendLine("3. إن كان الخلل في مشروعي (لا في التطبيق المُصنِّع)، اذكر الملف " +

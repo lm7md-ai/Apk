@@ -19,6 +19,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.universal.apkfactory.core.detector.HybridConfigParser
 import com.universal.apkfactory.core.ingestion.IngestionManager
+import com.universal.apkfactory.core.diag.BuildAutoRepairEngine
 import com.universal.apkfactory.core.diag.BuildFailureAnalyzer
 import com.universal.apkfactory.core.python.PythonRuntimeManager
 import com.universal.apkfactory.core.model.BuildLogLine
@@ -35,6 +36,7 @@ import com.universal.apkfactory.engine.gradle.NativeGradleService
 import com.universal.apkfactory.engine.gradle.ToolchainManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -91,6 +93,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val patVerifyMessage: String? = null,
         /** Diagnosis of the last failed build (null when none). */
         val diagnosis: BuildFailureAnalyzer.FailureDiagnosis? = null,
+        /**
+         * Everything the auto-repair engine fixed so far this build (v6):
+         * pre-flight fixes plus failure-driven repairs before each retry.
+         * Rendered as an amber card on the Build screen and embedded into
+         * the AI prompt.
+         */
+        val repairEvents: List<BuildAutoRepairEngine.RepairEvent> = emptyList(),
         /** Provisioned CPython runtime, when installed. */
         val pythonRuntime: PythonRuntimeManager.RuntimeInfo? = null,
         /**
@@ -244,6 +253,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     phase = BuildPhase.INGESTING,
                     error = null,
                     diagnosis = null,
+                    repairEvents = emptyList(),
                     logs = emptyList(),
                     resultApk = null,
                 )
@@ -278,6 +288,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     phase = BuildPhase.INGESTING,
                     error = null,
                     diagnosis = null,
+                    repairEvents = emptyList(),
                     logs = emptyList(),
                     resultApk = null,
                 )
@@ -315,6 +326,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     phase = BuildPhase.INGESTING,
                     error = null,
                     diagnosis = null,
+                    repairEvents = emptyList(),
                     logs = emptyList(),
                     resultApk = null,
                 )
@@ -421,6 +433,74 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
      * Builds the diagnosis for the failure that just occurred, from the
      * current mode, phase, error and captured terminal log.
      */
+    /**
+     * v6 auto-repair decision point after a failed build attempt.
+     *
+     * When the failure matches a repair rule and attempts remain: applies
+     * the plan (mutated project/config into UiState, backoff delay, logged
+     * events) and returns it so the caller honors
+     * [BuildAutoRepairEngine.RepairPlan.dropIcon] and retries. Returns
+     * `null` when the caller must NOT retry — no rule matched or attempts
+     * are exhausted — with the state already switched to FAILED carrying
+     * the diagnosis + AI prompt (which embeds the repair history).
+     */
+    private suspend fun repairOrFail(
+        error: Exception,
+        attempt: Int,
+    ): BuildAutoRepairEngine.RepairPlan? {
+        val project = _state.value.project
+        val config = _state.value.config
+        if (project == null || config == null) {
+            failBuild(error)
+            return null
+        }
+        val plan = BuildAutoRepairEngine.analyzeFailure(
+            attempt = attempt,
+            project = project,
+            config = config,
+            error = error,
+            logTail = _state.value.logs.takeLast(60).map { it.message },
+            workDir = File(graph.appContext.cacheDir, "auto-repair"),
+        )
+        if (plan == null || attempt >= BuildAutoRepairEngine.MAX_ATTEMPTS) {
+            appendLog(
+                if (plan == null) {
+                    "🔧 auto-repair: no automatic fix is possible for this failure."
+                } else {
+                    "🔧 auto-repair: repair attempts exhausted " +
+                        "(${BuildAutoRepairEngine.MAX_ATTEMPTS})."
+                }
+            )
+            failBuild(error)
+            return null
+        }
+        if (plan.retryDelayMs > 0) delay(plan.retryDelayMs)
+        plan.events.forEach { event ->
+            appendLog("🔧 auto-repair (attempt $attempt failed): $event")
+        }
+        _state.update { state ->
+            state.copy(
+                project = plan.project,
+                config = plan.config,
+                repairEvents = state.repairEvents + plan.events,
+            )
+        }
+        return plan
+    }
+
+    /** Switches to FAILED with the diagnosis + AI prompt (incl. repair history). */
+    private fun failBuild(error: Exception) {
+        appendLog("ERROR: ${error.message}")
+        _state.update {
+            it.copy(
+                phase = BuildPhase.FAILED,
+                busy = false,
+                error = error.message,
+                diagnosis = failureDiagnosisOf(error),
+            )
+        }
+    }
+
     private fun failureDiagnosisOf(
         error: Throwable?,
         messageOverride: String? = null,
@@ -430,6 +510,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             phaseName = _state.value.phase.name,
             error = error ?: messageOverride?.let { RuntimeException(it) },
             logs = _state.value.logs,
+            repairHistory = _state.value.repairEvents.map { it.toString() },
         )
 
     /* ------------------------------------------------------------------ */
@@ -525,9 +606,27 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     /** One-click build: routes by mode and the user's engine choice. */
     fun startBuild() {
-        val project = _state.value.project ?: return
-        val config = _state.value.config ?: return
+        val rawProject = _state.value.project ?: return
+        val rawConfig = _state.value.config ?: return
         if (_state.value.busy || _state.value.phase == BuildPhase.NATIVE_BUILDING) return
+
+        // v6 — pre-flight auto-repair: fix what is fixable (invalid package
+        // id, broken version fields, missing entry files) before the first
+        // attempt instead of failing the build on it.
+        val preflight = BuildAutoRepairEngine.preflight(rawProject, rawConfig)
+        preflight.events.forEach { event ->
+            appendLog("🔧 auto-repair (pre-flight): $event")
+        }
+        val project = preflight.project
+        val config = preflight.config
+        _state.update {
+            it.copy(
+                project = project,
+                config = config,
+                repairEvents = preflight.events,
+            )
+        }
+
         if (config.validate().isNotEmpty()) {
             _state.update { it.copy(error = config.validate().joinToString("; ")) }
             return
@@ -548,8 +647,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private fun startFastBuild() {
-        val project = _state.value.project ?: return
-        val config = _state.value.config ?: return
         buildJob = viewModelScope.launch {
             _state.update {
                 it.copy(
@@ -561,25 +658,32 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     resultApk = null,
                 )
             }
-            try {
-                val apk = graph.buildOrchestrator.runFastBuild(
-                    detected = project,
-                    config = config,
-                    iconBitmap = iconBitmap,
-                    onLog = ::onLog,
-                )
-                _state.update {
-                    it.copy(phase = BuildPhase.DONE, busy = false, resultApk = apk)
-                }
-            } catch (error: Exception) {
-                appendLog("ERROR: ${error.message}")
-                _state.update {
-                    it.copy(
-                        phase = BuildPhase.FAILED,
-                        busy = false,
-                        error = error.message,
-                        diagnosis = failureDiagnosisOf(error),
+            var attempt = 1
+            var dropIcon = false
+            while (true) {
+                try {
+                    val project = _state.value.project ?: return@launch
+                    val config = _state.value.config ?: return@launch
+                    if (attempt > 1) {
+                        appendLog(
+                            "🔁 Retrying the fast build " +
+                                "(attempt $attempt/${BuildAutoRepairEngine.MAX_ATTEMPTS}) …"
+                        )
+                    }
+                    val apk = graph.buildOrchestrator.runFastBuild(
+                        detected = project,
+                        config = config,
+                        iconBitmap = if (dropIcon) null else iconBitmap,
+                        onLog = ::onLog,
                     )
+                    _state.update {
+                        it.copy(phase = BuildPhase.DONE, busy = false, resultApk = apk)
+                    }
+                    return@launch
+                } catch (error: Exception) {
+                    val repaired = repairOrFail(error, attempt) ?: return@launch
+                    dropIcon = dropIcon || repaired.dropIcon
+                    attempt++
                 }
             }
         }
@@ -608,27 +712,34 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     resultApk = null,
                 )
             }
-            try {
-                val apk = graph.buildOrchestrator.runCloudBuild(
-                    detected = project,
-                    config = config,
-                    iconBitmap = iconBitmap,
-                    onLog = ::onLog,
-                ) { progress ->
-                    _state.update { it.copy(cloudProgress = progress) }
-                }
-                _state.update {
-                    it.copy(phase = BuildPhase.DONE, busy = false, resultApk = apk)
-                }
-            } catch (error: Exception) {
-                appendLog("ERROR: ${error.message}")
-                _state.update {
-                    it.copy(
-                        phase = BuildPhase.FAILED,
-                        busy = false,
-                        error = error.message,
-                        diagnosis = failureDiagnosisOf(error),
-                    )
+            var attempt = 1
+            var dropIcon = false
+            while (true) {
+                try {
+                    val currentProject = _state.value.project ?: project
+                    val currentConfig = _state.value.config ?: config
+                    if (attempt > 1) {
+                        appendLog(
+                            "🔁 Retrying the cloud build " +
+                                "(attempt $attempt/${BuildAutoRepairEngine.MAX_ATTEMPTS}) …"
+                        )
+                    }
+                    val apk = graph.buildOrchestrator.runCloudBuild(
+                        detected = currentProject,
+                        config = currentConfig,
+                        iconBitmap = if (dropIcon) null else iconBitmap,
+                        onLog = ::onLog,
+                    ) { progress ->
+                        _state.update { it.copy(cloudProgress = progress) }
+                    }
+                    _state.update {
+                        it.copy(phase = BuildPhase.DONE, busy = false, resultApk = apk)
+                    }
+                    return@launch
+                } catch (error: Exception) {
+                    val repaired = repairOrFail(error, attempt) ?: return@launch
+                    dropIcon = dropIcon || repaired.dropIcon
+                    attempt++
                 }
             }
         }

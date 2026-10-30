@@ -30,6 +30,7 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.filled.AutoFixHigh
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Terminal
@@ -105,6 +106,15 @@ fun BuildScreen(
 
         NativeSummaryCard(state)
 
+        // v6 — everything the auto-repair engine fixed (pre-flight or
+        // between retries); visible while retrying and after final failure.
+        if (state.repairEvents.isNotEmpty()) {
+            AutoRepairCard(
+                events = state.repairEvents,
+                buildActive = state.busy,
+            )
+        }
+
         TerminalCard(lines = state.logs)
 
         state.resultApk?.let { apk ->
@@ -135,6 +145,72 @@ fun BuildScreen(
         }
 
         Spacer(modifier = Modifier.height(24.dp))
+    }
+}
+
+/* ---------------------------------------------------------------------- */
+/* Auto-repair card (v6)                                                   */
+/* ---------------------------------------------------------------------- */
+
+/**
+ * Amber card listing everything the auto-repair engine fixed for the
+ * current build: pre-flight fixes and failure-driven repairs between the
+ * automatic retries. While the build is running it tells the user a retry
+ * is underway; on final failure it points at the diagnosis below.
+ */
+@Composable
+private fun AutoRepairCard(
+    events: List<com.universal.apkfactory.core.diag.BuildAutoRepairEngine.RepairEvent>,
+    buildActive: Boolean,
+) {
+    ElevatedCard(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.elevatedCardColors(
+            containerColor = Color(0xFFFFF3E0),
+            contentColor = Color(0xFF5D4037),
+        ),
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.AutoFixHigh,
+                    contentDescription = null,
+                    tint = Color(0xFFEF6C00),
+                    modifier = Modifier.size(22.dp),
+                )
+                Text(
+                    text = stringResource(R.string.repair_title),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                )
+            }
+            events.forEach { event ->
+                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Text(
+                        text = "⚠ ${event.problem}",
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                    Text(
+                        text = "→ ${event.action}",
+                        style = MaterialTheme.typography.bodySmall,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                }
+            }
+            Text(
+                text = stringResource(
+                    if (buildActive) R.string.repair_retrying else R.string.repair_exhausted
+                ),
+                style = MaterialTheme.typography.bodySmall,
+                color = if (buildActive) Color(0xFFEF6C00) else MaterialTheme.colorScheme.error,
+            )
+        }
     }
 }
 

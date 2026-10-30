@@ -160,6 +160,11 @@
     <string name="python_advanced_show">خيارات متقدمة: تثبيت بيئة مخصصة</string>
     <string name="python_advanced_hide">إخفاء الخيارات المتقدمة</string>
 
+    <!-- Auto-repair engine (v6) -->
+    <string name="repair_title">الإصلاح التلقائي</string>
+    <string name="repair_retrying">تم الإصلاح — إعادة محاولة البناء تلقائياً…</string>
+    <string name="repair_exhausted">لم يعد الإصلاح التلقائي ممكناً — راجع التشخيص والبرومت الجاهز أدناه.</string>
+
     <!-- Keystores & Cloud -->
     <string name="pat_title">رمز الوصول الشخصي لـ GitHub</string>
     <string name="pat_sub">مطلوب للبناء السحابي واستيراد المستودعات</string>

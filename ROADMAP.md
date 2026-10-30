@@ -37,8 +37,15 @@ Ideas ordered by impact; anything unchecked is open for contribution.
 
 ## Platform & UX
 
-- [ ] **AI-assisted auto-repair** — on failure, send the generated prompt to
-      a user-configured AI endpoint and offer a patch automatically.
+- [x] **AI-assisted auto-repair** — *(v6 delivered the self-healing core)*
+      `BuildAutoRepairEngine` runs pre-flight fixes (invalid package id,
+      broken version fields, missing web/Python entry files) and, on failure,
+      applies repair rules (drop a broken icon, unwrap an APK nested inside
+      a zip, backoff-retry transient network errors) and automatically
+      retries up to 3 attempts; the failure surface shows what was fixed
+      and the ready AI prompt embeds the repair history.
+      *Still open:* sending the prompt to a user-configured AI endpoint
+      and offering a patch automatically.
 - [ ] **App library screen** — installed factory-built apps, launch/uninstall,
       version history, diff of configs.
 - [ ] **Profiles** — per-project keystore + icon + permission presets.
