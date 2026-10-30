@@ -152,6 +152,7 @@ private fun TerminalCard(lines: List<com.universal.apkfactory.core.model.BuildLo
     var copied by androidx.compose.runtime.remember {
         androidx.compose.runtime.mutableStateOf(false)
     }
+    val clipboardLabel = stringResource(R.string.clipboard_label_build_log)
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -182,7 +183,7 @@ private fun TerminalCard(lines: List<com.universal.apkfactory.core.model.BuildLo
                     )
                     clipboard?.setPrimaryClip(
                         android.content.ClipData.newPlainText(
-                            stringResource(R.string.clipboard_label_build_log),
+                            clipboardLabel,
                             lines.joinToString("\n") {
                                 "[%s] %s".format(it.level, it.message)
                             },

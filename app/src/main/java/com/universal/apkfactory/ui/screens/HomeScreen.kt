@@ -326,9 +326,7 @@ fun HomeScreen(
 
         // ---------- Language ----------
         val context = LocalContext.current
-        var language by androidx.compose.runtime.rememberSaveable {
-            androidx.compose.runtime.mutableStateOf(AppLocale.current(context))
-        }
+        var language by rememberSaveable { mutableStateOf(AppLocale.current(context)) }
         ElevatedCard(modifier = Modifier.fillMaxWidth()) {
             Column(
                 modifier = Modifier.padding(16.dp),
