@@ -27,7 +27,14 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Badge
 import androidx.compose.material.icons.filled.Image
+import androidx.compose.material.icons.filled.Palette
+import androidx.compose.material.icons.filled.RocketLaunch
+import androidx.compose.material.icons.filled.Shield
+import com.universal.apkfactory.ui.components.EvidenceBox
+import com.universal.apkfactory.ui.components.FactoryCardHeader
+import com.universal.apkfactory.ui.components.GradientButton
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
@@ -130,13 +137,7 @@ fun ConfigScreen(
                         style = MaterialTheme.typography.labelLarge,
                         modifier = Modifier.padding(top = 4.dp),
                     )
-                    project.evidence.take(8).forEach { signal ->
-                        Text(
-                            text = "• $signal",
-                            style = MaterialTheme.typography.bodySmall,
-                            fontFamily = FontFamily.Monospace,
-                        )
-                    }
+                    EvidenceBox(lines = project.evidence)
                 }
                 config.metadataOriginNote?.let { note ->
                     Text(
@@ -154,7 +155,11 @@ fun ConfigScreen(
                 modifier = Modifier.padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
-                Text("App identity", style = MaterialTheme.typography.titleMedium)
+                FactoryCardHeader(
+                    icon = Icons.Filled.Badge,
+                    title = "App identity",
+                    subtitle = "Name, package id, version and launcher icon",
+                )
                 OutlinedTextField(
                     value = config.appName,
                     onValueChange = { value ->
@@ -227,7 +232,11 @@ fun ConfigScreen(
                 modifier = Modifier.padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
-                Text("Look & feel", style = MaterialTheme.typography.titleMedium)
+                FactoryCardHeader(
+                    icon = Icons.Filled.Palette,
+                    title = "Look & feel",
+                    subtitle = "Orientation and fullscreen",
+                )
 
                 val orientations = listOf(
                     AppOrientation.UNSPECIFIED to "Auto",
@@ -287,7 +296,11 @@ fun ConfigScreen(
                 modifier = Modifier.padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
-                Text("Permissions", style = MaterialTheme.typography.titleMedium)
+                FactoryCardHeader(
+                    icon = Icons.Filled.Shield,
+                    title = "Permissions",
+                    subtitle = "INTERNET is always included for web and python shells",
+                )
                 Text(
                     text = "INTERNET is always included for web and python shells.",
                     style = MaterialTheme.typography.bodySmall,
@@ -314,7 +327,10 @@ fun ConfigScreen(
                 modifier = Modifier.padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
-                Text("Build engine", style = MaterialTheme.typography.titleMedium)
+                FactoryCardHeader(
+                    icon = Icons.Filled.RocketLaunch,
+                    title = "Build engine",
+                )
 
                 when (project.mode) {
                     BuildMode.MODE_APK_EDITOR,
@@ -406,13 +422,12 @@ fun ConfigScreen(
                     }
                 }
 
-                Button(
+                GradientButton(
+                    text = buttonLabelFor(project.mode, state.nativeOnDevice),
                     onClick = onStartBuild,
                     enabled = problems.isEmpty() && !state.busy,
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Text(buttonLabelFor(project.mode, state.nativeOnDevice))
-                }
+                    icon = Icons.Filled.RocketLaunch,
+                )
             }
         }
 

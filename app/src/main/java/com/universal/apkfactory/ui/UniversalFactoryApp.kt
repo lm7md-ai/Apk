@@ -12,7 +12,19 @@ package com.universal.apkfactory.ui
 
 import android.content.Context
 import android.content.Intent
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.unit.dp
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -20,21 +32,26 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.core.content.FileProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.universal.apkfactory.MainViewModel
 import com.universal.apkfactory.ui.screens.BuildScreen
+import com.universal.apkfactory.ui.theme.FactoryGradients
 import com.universal.apkfactory.ui.screens.ConfigScreen
 import com.universal.apkfactory.ui.screens.HomeScreen
 import com.universal.apkfactory.ui.screens.KeystoreScreen
@@ -69,11 +86,37 @@ fun UniversalFactoryApp(viewModel: MainViewModel) {
     Scaffold(
         topBar = {
             TopAppBar(
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.background,
+                ),
                 title = {
-                    Text(
-                        text = screenTitle(state.screen),
-                        fontWeight = FontWeight.SemiBold,
-                    )
+                    if (state.screen == MainViewModel.Screen.HOME) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(30.dp)
+                                    .background(
+                                        FactoryGradients.Amber,
+                                        RoundedCornerShape(9.dp),
+                                    ),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Text("⚡", style = MaterialTheme.typography.titleMedium)
+                            }
+                            Text(
+                                text = screenTitle(state.screen),
+                                fontWeight = FontWeight.Bold,
+                            )
+                        }
+                    } else {
+                        Text(
+                            text = screenTitle(state.screen),
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                    }
                 },
                 navigationIcon = {
                     if (state.screen != MainViewModel.Screen.HOME) {
@@ -93,7 +136,15 @@ fun UniversalFactoryApp(viewModel: MainViewModel) {
     ) { padding ->
         val screenModifier = Modifier.padding(padding)
 
-        when (state.screen) {
+        AnimatedContent(
+            targetState = state.screen,
+            transitionSpec = {
+                (fadeIn() + slideInHorizontally { it / 8 }) togetherWith
+                    (fadeOut() + slideOutHorizontally { -it / 8 })
+            },
+            label = "screen",
+        ) { screen ->
+            when (screen) {
             MainViewModel.Screen.HOME -> HomeScreen(
                 state = state,
                 onSubmitGithubUrl = { viewModel.ingestGithub(it) },
@@ -147,6 +198,7 @@ fun UniversalFactoryApp(viewModel: MainViewModel) {
                 onCreateKeystore = { viewModel.createKeystoreFor(it) },
                 modifier = screenModifier,
             )
+        }
         }
     }
 }

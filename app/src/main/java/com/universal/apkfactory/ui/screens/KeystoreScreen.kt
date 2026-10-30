@@ -27,6 +27,8 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CloudDone
 import androidx.compose.material.icons.filled.Key
 import androidx.compose.material.icons.filled.VpnKey
+import com.universal.apkfactory.ui.components.FactoryCardHeader
+import com.universal.apkfactory.ui.components.StatusPill
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -145,20 +147,18 @@ fun KeystoreScreen(
                 modifier = Modifier.padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                ) {
-                    Icon(
-                        imageVector = Icons.Filled.VpnKey,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.secondary,
-                    )
-                    Text(
-                        text = "GitHub Personal Access Token",
-                        style = MaterialTheme.typography.titleMedium,
-                    )
-                }
+                FactoryCardHeader(
+                    icon = Icons.Filled.VpnKey,
+                    title = "GitHub Personal Access Token",
+                    subtitle = "Needed for cloud builds and repository ingestion",
+                    badgeContainer = MaterialTheme.colorScheme.tertiaryContainer,
+                    badgeTint = MaterialTheme.colorScheme.onTertiaryContainer,
+                    trailing = {
+                        if (state.patPresent) {
+                            StatusPill(text = "verified", ok = true)
+                        }
+                    },
+                )
                 Text(
                     text = "Needed for cloud builds on GitHub Actions. Create a classic " +
                         "token at github.com/settings/tokens with the repo, workflow and " +
@@ -220,20 +220,11 @@ fun KeystoreScreen(
                 modifier = Modifier.padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                ) {
-                    Icon(
-                        imageVector = Icons.Filled.Key,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                    )
-                    Text(
-                        text = "Signing keystores",
-                        style = MaterialTheme.typography.titleMedium,
-                    )
-                }
+                FactoryCardHeader(
+                    icon = Icons.Filled.Key,
+                    title = "Signing keystores",
+                    subtitle = "${state.keystores.size} store(s) on this device",
+                )
                 Text(
                     text = "Every package gets a persistent keystore on first build; " +
                         "updates stay signable. Import your own store to keep an existing " +

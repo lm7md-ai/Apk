@@ -12,6 +12,7 @@ package com.universal.apkfactory.ui.screens
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -20,15 +21,19 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CloudDownload
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material.icons.filled.CreateNewFolder
 import androidx.compose.material.icons.filled.FolderZip
 import androidx.compose.material.icons.filled.Key
 import androidx.compose.material.icons.filled.Memory
-import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material.icons.filled.PrecisionManufacturing
+import androidx.compose.material.icons.filled.Share
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -36,7 +41,6 @@ import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -52,15 +56,19 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.universal.apkfactory.MainViewModel
 import com.universal.apkfactory.engine.gradle.ToolchainManager
+import com.universal.apkfactory.ui.components.FactoryCardHeader
+import com.universal.apkfactory.ui.components.HeroHeader
+import com.universal.apkfactory.ui.components.IconBadge
+import com.universal.apkfactory.ui.components.InfoBanner
+import com.universal.apkfactory.ui.components.StepRow
+import com.universal.apkfactory.ui.components.StatusPill
+import com.universal.apkfactory.ui.theme.Dimens
 
 /**
- * Part 5 — Dashboard: the ingestion hub.
- *
- * Every factory session starts here: pick an archive, pick a folder, paste
- * a GitHub URL (or share one from any app), pre-provision the on-device
- * compiler toolchain, or manage keystores and the cloud PAT.
+ * Dashboard — the ingestion hub, redesigned around the Amber Forge system:
+ * a hero brand header, a focused GitHub import card, two large source
+ * tiles, a live readiness strip and a compact "how it works" guide.
  */
-@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     state: MainViewModel.UiState,
@@ -88,22 +96,12 @@ fun HomeScreen(
         modifier = modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 20.dp, vertical = 8.dp),
+            .padding(horizontal = Dimens.screenH, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        Column {
-            Text(
-                text = "Universal APK Factory",
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold,
-            )
-            Text(
-                text = "Turn anything into an installable, signed Android app.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
+        HeroHeader()
 
+        // ---------- Busy / provisioning card ----------
         if (state.busy) {
             Card(
                 modifier = Modifier.fillMaxWidth(),
@@ -123,6 +121,7 @@ fun HomeScreen(
                         Text(
                             text = state.busyMessage ?: "Working …",
                             style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Medium,
                         )
                     }
                     when (val event = state.toolchainEvent) {
@@ -150,15 +149,44 @@ fun HomeScreen(
             }
         }
 
-        // ---------- GitHub URL ----------
+        // ---------- Readiness strip ----------
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            StatusPill(
+                text = if (state.toolchainReady) "Toolchain" else "No toolchain",
+                ok = state.toolchainReady,
+                modifier = Modifier.weight(1f, fill = false),
+            )
+            StatusPill(
+                text = if (state.patPresent) "@${state.patLogin ?: "github"}" else "No token",
+                ok = state.patPresent,
+                modifier = Modifier.weight(1f, fill = false),
+            )
+            StatusPill(
+                text = if (state.pythonRuntime != null) {
+                    "Python ${state.pythonRuntime.pythonVersion}"
+                } else {
+                    "No Python"
+                },
+                ok = state.pythonRuntime != null,
+                modifier = Modifier.weight(1f, fill = false),
+            )
+        }
+
+        // ---------- GitHub import ----------
         ElevatedCard(modifier = Modifier.fillMaxWidth()) {
             Column(
                 modifier = Modifier.padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                Text(
-                    text = "From a GitHub repository",
-                    style = MaterialTheme.typography.titleMedium,
+                FactoryCardHeader(
+                    icon = Icons.Filled.Cloud,
+                    title = "From a GitHub repository",
+                    subtitle = "Branch, tag and subfolder URLs are supported",
+                    badgeContainer = MaterialTheme.colorScheme.tertiaryContainer,
+                    badgeTint = MaterialTheme.colorScheme.onTertiaryContainer,
                 )
                 OutlinedTextField(
                     value = githubUrl,
@@ -166,45 +194,40 @@ fun HomeScreen(
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                     label = { Text("https://github.com/owner/repo") },
-                    supportingText = {
-                        Text("Branch, tag and subfolder URLs are supported")
-                    },
                 )
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedButton(
-                        onClick = { onSubmitGithubUrl(githubUrl) },
-                        enabled = githubUrl.isNotBlank() && !state.busy,
-                    ) {
-                        Text("Fetch & detect")
-                    }
+                Button(
+                    onClick = { onSubmitGithubUrl(githubUrl) },
+                    enabled = githubUrl.isNotBlank() && !state.busy,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text("Fetch & detect")
                 }
             }
         }
 
-        // ---------- Local sources ----------
-        Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-            SourceCard(
+        // ---------- Local source tiles ----------
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            SourceTile(
                 modifier = Modifier.weight(1f),
                 icon = Icons.Filled.FolderZip,
                 title = "ZIP / APK",
-                subtitle = "Archive from your device",
+                subtitle = "Pick an archive",
                 enabled = !state.busy,
                 onClick = { archivePicker.launch("*/*") },
             )
-            SourceCard(
+            SourceTile(
                 modifier = Modifier.weight(1f),
                 icon = Icons.Filled.CreateNewFolder,
                 title = "Folder",
-                subtitle = "Pick a project directory",
+                subtitle = "Pick a directory",
                 enabled = !state.busy,
                 onClick = { folderPicker.launch(null) },
             )
         }
 
-        Text(
+        InfoBanner(
             text = "… or use the Android Share Sheet to send archives and GitHub links here.",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            icon = Icons.Filled.Share,
         )
 
         // ---------- Toolchain ----------
@@ -213,37 +236,23 @@ fun HomeScreen(
                 modifier = Modifier.padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
-                    Icon(
-                        imageVector = Icons.Filled.Memory,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                    )
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = "On-device compiler",
-                            style = MaterialTheme.typography.titleMedium,
-                        )
-                        Text(
-                            text = if (state.toolchainReady) {
-                                "JDK 21 + Gradle 8.9 + Android SDK ready"
-                            } else {
-                                "Not downloaded yet (about 500 MiB, one time)"
-                            },
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                    TextButton(
-                        onClick = onPrepareToolchain,
-                        enabled = !state.busy,
-                    ) {
-                        Text(if (state.toolchainReady) "Verify" else "Download")
-                    }
-                }
+                FactoryCardHeader(
+                    icon = Icons.Filled.Memory,
+                    title = "On-device compiler",
+                    subtitle = if (state.toolchainReady) {
+                        "JDK 21 + Gradle 8.9 + Android SDK ready"
+                    } else {
+                        "Not downloaded yet (about 500 MiB, one time)"
+                    },
+                    trailing = {
+                        TextButton(
+                            onClick = onPrepareToolchain,
+                            enabled = !state.busy,
+                        ) {
+                            Text(if (state.toolchainReady) "Verify" else "Download")
+                        }
+                    },
+                )
             }
         }
 
@@ -257,10 +266,10 @@ fun HomeScreen(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                Icon(
-                    imageVector = Icons.Filled.Key,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.secondary,
+                IconBadge(
+                    icon = Icons.Filled.Key,
+                    container = MaterialTheme.colorScheme.secondaryContainer,
+                    tint = MaterialTheme.colorScheme.onSecondaryContainer,
                 )
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
@@ -279,19 +288,53 @@ fun HomeScreen(
                     )
                 }
                 Icon(
-                    imageVector = Icons.Filled.CloudDownload,
+                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.outline,
                 )
             }
         }
 
-        Spacer(modifier = Modifier.height(24.dp))
+        // ---------- How it works ----------
+        ElevatedCard(modifier = Modifier.fillMaxWidth()) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                FactoryCardHeader(
+                    icon = Icons.Filled.PrecisionManufacturing,
+                    title = "How it works",
+                    badgeContainer = MaterialTheme.colorScheme.surfaceVariant,
+                    badgeTint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                StepRow(
+                    number = 1,
+                    title = "Feed it a project",
+                    description = "A ZIP, a folder, a GitHub link or an existing APK.",
+                )
+                StepRow(
+                    number = 2,
+                    title = "Tune the app",
+                    description = "Name, package id, icon, permissions — or accept the smart defaults.",
+                )
+                StepRow(
+                    number = 3,
+                    title = "Get an installable APK",
+                    description = "Built, 4-byte aligned and signed V1 + V2 + V3 in seconds.",
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(Dimens.xl))
     }
 }
 
+/* ---------------------------------------------------------------------- */
+/* Source tile                                                            */
+/* ---------------------------------------------------------------------- */
+
 @Composable
-private fun SourceCard(
+private fun SourceTile(
     modifier: Modifier = Modifier,
     icon: ImageVector,
     title: String,
@@ -304,13 +347,9 @@ private fun SourceCard(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-            )
+            IconBadge(icon = icon)
             Text(text = title, style = MaterialTheme.typography.titleSmall)
             Text(
                 text = subtitle,

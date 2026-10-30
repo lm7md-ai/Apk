@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -23,7 +24,15 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.Terminal
 import androidx.compose.material.icons.filled.CloudQueue
 import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material.icons.filled.InstallMobile
@@ -42,10 +51,16 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.platform.LocalContext
+import com.universal.apkfactory.ui.theme.FactoryGradients
+import com.universal.apkfactory.ui.theme.FactoryTheme
 import androidx.compose.ui.unit.dp
 import com.universal.apkfactory.MainViewModel
 import com.universal.apkfactory.engine.cloud.GitHubCloudBuilder
@@ -87,14 +102,7 @@ fun BuildScreen(
 
         NativeSummaryCard(state)
 
-        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Text(
-                text = "Terminal",
-                style = MaterialTheme.typography.titleSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            TerminalLogViewer(lines = state.logs)
-        }
+        TerminalCard(lines = state.logs)
 
         state.resultApk?.let { apk ->
             ResultPanel(apk = apk, onInstall = onInstall, onShare = onShare)
@@ -124,6 +132,71 @@ fun BuildScreen(
         }
 
         Spacer(modifier = Modifier.height(24.dp))
+    }
+}
+
+/* ---------------------------------------------------------------------- */
+/* Terminal card                                                           */
+/* ---------------------------------------------------------------------- */
+
+/**
+ * The terminal wrapped in a card with a header row: terminal icon, live
+ * line counter and a one-tap copy-all action.
+ */
+@Composable
+private fun TerminalCard(lines: List<com.universal.apkfactory.core.model.BuildLogLine>) {
+    val context = LocalContext.current
+    var copied by androidx.compose.runtime.remember {
+        androidx.compose.runtime.mutableStateOf(false)
+    }
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Icon(
+                imageVector = Icons.Filled.Terminal,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(18.dp),
+            )
+            Text(
+                text = "Build log",
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(modifier = Modifier.weight(1f))
+            Text(
+                text = "${lines.size} lines",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            TextButton(
+                enabled = lines.isNotEmpty(),
+                onClick = {
+                    val clipboard = context.getSystemService(
+                        android.content.ClipboardManager::class.java
+                    )
+                    clipboard?.setPrimaryClip(
+                        android.content.ClipData.newPlainText(
+                            "APK Factory build log",
+                            lines.joinToString("\n") {
+                                "[%s] %s".format(it.level, it.message)
+                            },
+                        )
+                    )
+                    copied = true
+                },
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.ContentCopy,
+                    contentDescription = null,
+                    modifier = Modifier.size(14.dp),
+                )
+                Text(if (copied) "  Copied" else "  Copy")
+            }
+        }
+        TerminalLogViewer(lines = lines)
     }
 }
 
@@ -171,34 +244,68 @@ private fun PhaseBanner(state: MainViewModel.UiState, onCancelNative: () -> Unit
         )
     }
 
+    val failed = state.phase == MainViewModel.BuildPhase.FAILED
+    val done = state.phase == MainViewModel.BuildPhase.DONE
+    val pulse = rememberInfiniteTransition(label = "pulse")
+    val pulseAlpha by pulse.animateFloat(
+        initialValue = 1f,
+        targetValue = 0.35f,
+        animationSpec = infiniteRepeatable(tween(900)),
+        label = "pulseAlpha",
+    )
+
     ElevatedCard(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                horizontalArrangement = Arrangement.spacedBy(14.dp),
             ) {
-                if (running) {
-                    CircularProgressIndicator(modifier = Modifier.size(22.dp))
-                } else {
-                    Icon(
-                        imageVector = icon,
-                        contentDescription = null,
-                        tint = if (state.phase == MainViewModel.BuildPhase.FAILED) {
-                            MaterialTheme.colorScheme.error
-                        } else {
-                            MaterialTheme.colorScheme.primary
-                        },
-                    )
+                Box(
+                    modifier = Modifier
+                        .size(44.dp)
+                        .background(
+                            when {
+                                failed -> MaterialTheme.colorScheme.errorContainer
+                                done -> FactoryTheme.ext.successContainer
+                                else -> MaterialTheme.colorScheme.primaryContainer
+                            },
+                            RoundedCornerShape(14.dp),
+                        ),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    if (running) {
+                        CircularProgressIndicator(
+                            modifier = Modifier
+                                .size(22.dp)
+                                .alpha(pulseAlpha),
+                            strokeWidth = 2.5.dp,
+                        )
+                    } else {
+                        Icon(
+                            imageVector = icon,
+                            contentDescription = null,
+                            tint = when {
+                                failed -> MaterialTheme.colorScheme.onErrorContainer
+                                done -> FactoryTheme.ext.onSuccessContainer
+                                else -> MaterialTheme.colorScheme.onPrimaryContainer
+                            },
+                            modifier = Modifier.size(24.dp),
+                        )
+                    }
                 }
                 Text(
                     text = title,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
                 )
             }
             if (running) {
-                Spacer(modifier = Modifier.height(10.dp))
-                LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                Spacer(modifier = Modifier.height(14.dp))
+                LinearProgressIndicator(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .alpha(pulseAlpha * 0.6f + 0.4f),
+                )
             }
             if (state.phase == MainViewModel.BuildPhase.NATIVE_BUILDING) {
                 Spacer(modifier = Modifier.height(8.dp))
@@ -390,36 +497,50 @@ private fun ResultPanel(apk: java.io.File, onInstall: () -> Unit, onShare: () ->
     ElevatedCard(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.elevatedCardColors(
-            containerColor = MaterialTheme.colorScheme.primaryContainer
+            containerColor = MaterialTheme.colorScheme.surface
         ),
     ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
+        Column {
+            // Gradient success band.
             Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(FactoryTheme.ext.successContainer)
+                    .padding(horizontal = 16.dp, vertical = 14.dp),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 Icon(
                     imageVector = Icons.Filled.CheckCircle,
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                    tint = FactoryTheme.ext.onSuccessContainer,
+                    modifier = Modifier.size(28.dp),
                 )
                 Column {
                     Text(
                         text = apk.name,
                         style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
+                        fontWeight = FontWeight.Bold,
+                        color = FactoryTheme.ext.onSuccessContainer,
                     )
                     Text(
-                        text = "${apk.length() / 1024} KiB • signed (V1 + V2 + V3) • 4-byte aligned",
+                        text = String.format(
+                            "%.1f MiB • signed (V1 + V2 + V3) • 4-byte aligned",
+                            apk.length() / 1024.0 / 1024.0,
+                        ),
                         style = MaterialTheme.typography.bodySmall,
+                        color = FactoryTheme.ext.onSuccessContainer,
                     )
                 }
             }
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                Button(onClick = onInstall) {
+            Row(
+                modifier = Modifier.padding(16.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                Button(
+                    onClick = onInstall,
+                    modifier = Modifier.weight(1f),
+                ) {
                     Icon(
                         imageVector = Icons.Filled.InstallMobile,
                         contentDescription = null,
@@ -428,7 +549,10 @@ private fun ResultPanel(apk: java.io.File, onInstall: () -> Unit, onShare: () ->
                     Spacer(modifier = Modifier.width(6.dp))
                     Text("Install")
                 }
-                OutlinedButton(onClick = onShare) {
+                OutlinedButton(
+                    onClick = onShare,
+                    modifier = Modifier.weight(1f),
+                ) {
                     Icon(
                         imageVector = Icons.Filled.Share,
                         contentDescription = null,

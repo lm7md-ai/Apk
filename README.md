@@ -116,6 +116,24 @@ with `JAVA_HOME`, `ANDROID_HOME`, `GRADLE_USER_HOME`, `TMPDIR`, `HOME` and `LD_L
 * **Android 14 special-use foreground service** — `NativeGradleService` declares `foregroundServiceType="specialUse"` with the `PROPERTY_SPECIAL_USE_FGS_SUBTYPE` property, as required by API 34+.
 * **Keystore cryptography** — Android's crippled `BC` provider is replaced process-wide with the full `org.bouncycastle:bcpkix-jdk18on` provider (`PKCS12`).
 
+## Design system — "Amber Forge" v2
+
+The whole UI was redesigned around a coherent in-house design system:
+
+* **Palette** — industrial amber on deep graphite (dark, "the factory
+  floor") and warm paper (light), with extended semantic tokens
+  (success / warning / info) beyond Material 3's slots. Brand colors are
+  used consistently instead of dynamic theming.
+* **UiKit** — shared visual vocabulary (`ui/components/UiKit.kt`): icon
+  badges, card headers, status pills, info banners, evidence boxes and the
+  signature amber **GradientButton** for the single primary action of each
+  screen.
+* **Motion** — animated screen transitions and a pulsing build phase
+  indicator.
+* **Screens** — hero brand header + readiness strip on Home, icon-badged
+  section cards on Configure, a gradient success band + copyable log card
+  on Build, and status pills on Keystores & Cloud.
+
 ## Smart failure diagnosis & AI support prompt
 
 Every failed build is analyzed by `core-diag/BuildFailureAnalyzer`:
