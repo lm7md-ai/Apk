@@ -31,6 +31,12 @@ shell-python/src/main/assets/python_runtime/
 *.keystore
 *.pem
 *.pass
+# EXCEPTION: the shared CI DEBUG identity (keystores/factory-debug.keystore)
+# is intentionally committed. It is a public debug key by convention (AOSP
+# debug-key practice: password "android"), NOT release signing material, and
+# it guarantees every build signs with the same certificate so APK updates
+# install over previous versions instead of failing with "App not installed".
+!keystores/factory-debug.keystore
 
 # Logs / OS
 *.log

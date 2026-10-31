@@ -238,6 +238,18 @@ The build automatically:
 3. downloads the AndroidIDE aarch64 aapt2 and packages it as `app/src/main/jniLibs/arm64-v8a/libaapt2.so` (override the URL with `-PapkfactoryAapt2Url=<tar.xz>`; skipped when the file already exists),
 4. builds the factory APK with both shells and the aapt2 runtime embedded.
 
+### Deterministic debug signing (v6.1)
+
+The debug APK is signed with the shared CI identity committed at
+`keystores/factory-debug.keystore` (a public debug key by convention —
+store/key password `android`, alias `apkfactory` — the same practice as
+AOSP's well-known debug key). Without it, every machine signs with its own
+`~/.android/debug.keystore` and GitHub **rotates** that key between runner
+image updates, so consecutive releases end up with different certificates —
+and Android then refuses to update one over the other ("App not installed").
+With the shared identity every build (local or CI) signs identically, and
+each release installs cleanly over the previous one.
+
 ### Provisioning a custom Python runtime (optional override)
 
 Locally (or to override the CI bundle), bundle any CPython 3 aarch64-android

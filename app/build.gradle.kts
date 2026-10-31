@@ -29,8 +29,8 @@ android {
         applicationId = "com.universal.apkfactory"
         minSdk = 26
         targetSdk = 35
-        versionCode = 6
-        versionName = "6.0.0"
+        versionCode = 7
+        versionName = "6.1.0"
 
         // This factory targets arm64-v8a devices only (the on-device native
         // toolchain — OpenJDK aarch64, aapt2-arm64 — is 64-bit ARM).
@@ -39,10 +39,29 @@ android {
         }
     }
 
+    signingConfigs {
+        // Shared CI debug identity, committed at keystores/factory-debug.keystore
+        // (a PUBLIC debug key by convention: store/key password "android", alias
+        // "apkfactory" — the same practice as AOSP's well-known debug key; it is
+        // NOT release signing material). Without this, every machine — including
+        // each GitHub runner — signs with its own ~/.android/debug.keystore, and
+        // GitHub rotates that key between runs, so two builds of the same app
+        // end up with different certificates and Android then refuses to update
+        // one over the other ("App not installed"). Pinning one shared debug
+        // identity makes every future build install cleanly over the previous.
+        create("factoryDebug") {
+            storeFile = rootProject.file("keystores/factory-debug.keystore")
+            storePassword = "android"
+            keyAlias = "apkfactory"
+            keyPassword = "android"
+        }
+    }
+
     buildTypes {
         debug {
             applicationIdSuffix = ".debug"
             versionNameSuffix = "-debug"
+            signingConfig = signingConfigs.getByName("factoryDebug")
         }
         release {
             isMinifyEnabled = false
