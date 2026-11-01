@@ -129,7 +129,8 @@
     <string name="config_fullscreen">Fullscreen / immersive</string>
     <string name="config_fullscreen_sub">Hide the status and navigation bars</string>
     <string name="config_permissions">Permissions</string>
-    <string name="config_permissions_sub">INTERNET is always included for web and python shells</string>
+    <string name="config_permissions_sub">Auto-detected from your code — adjust freely</string>
+    <string name="config_permissions_auto">Permissions are auto-detected from the code you upload and pre-enabled below. INTERNET is always included for web and python shells.</string>
     <string name="config_engine">Build engine</string>
     <string name="engine_fast_desc">Instant on-device packaging: shell patch + 4-byte align + V1/V2/V3 signing. No compiler needed.</string>
     <string name="engine_cloud_desc">The Node/Flutter toolchain runs on a free GitHub Actions runner; the result is finished and signed on this device.</string>

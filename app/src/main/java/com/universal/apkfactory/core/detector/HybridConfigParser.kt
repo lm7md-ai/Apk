@@ -73,9 +73,18 @@ object HybridConfigParser {
             is com.universal.apkfactory.core.model.IngestedSource.ApkFile -> { _ -> null }
         }
 
+        // v6.2 — automatic permissions: scan the uploaded sources for the
+        // browser APIs / Python modules the app actually uses and enable the
+        // matching Android permissions automatically (shell baseline + extras).
+        // Lazy: when apkconfig.json specifies `permissions` explicitly, the
+        // scan is never run — the user's list stays authoritative.
+        val permissionScan: PermissionInferenceEngine.Result by lazy {
+            PermissionInferenceEngine.infer(detected, peek)
+        }
+
         // ---- 1. apkconfig.json (authoritative) --------------------------
         peek(CONFIG_FILE)?.let { raw ->
-            runCatching { parseApkConfig(JSONObject(raw), detected) }.getOrNull()
+            runCatching { parseApkConfig(JSONObject(raw), detected, permissionScan) }.getOrNull()
                 ?.let { return it }
         }
 
@@ -88,23 +97,23 @@ object HybridConfigParser {
 
         // ---- 2. PWA manifest.json ----------------------------------------
         peek("manifest.json")?.let { raw ->
-            runCatching { parsePwaManifest(JSONObject(raw), displayName) }.getOrNull()
+            runCatching { parsePwaManifest(JSONObject(raw), displayName, permissionScan) }.getOrNull()
                 ?.let { return it }
         }
 
         // ---- 3. package.json ----------------------------------------------
         peek("package.json")?.let { raw ->
-            runCatching { parsePackageJson(JSONObject(raw), displayName) }.getOrNull()
+            runCatching { parsePackageJson(JSONObject(raw), displayName, permissionScan) }.getOrNull()
                 ?.let { return it }
         }
 
         // ---- 4. pubspec.yaml ------------------------------------------------
         peek("pubspec.yaml")?.let { raw ->
-            parsePubspec(raw, displayName)?.let { return it }
+            parsePubspec(raw, displayName, permissionScan)?.let { return it }
         }
 
         // ---- 6. filename fallback --------------------------------------------
-        return filenameFallback(detected, displayName)
+        return filenameFallback(detected, displayName, permissionScan)
     }
 
     /* ==================================================================== */
@@ -114,6 +123,7 @@ object HybridConfigParser {
     private fun parseApkConfig(
         root: JSONObject,
         detected: DetectedProject,
+        permissionScan: PermissionInferenceEngine.Result,
     ): ProjectBuildConfig {
         val appName = root.optString("appName").trim()
             .ifEmpty { detected.source.displayName.toPrettyAppName() }
@@ -140,7 +150,7 @@ object HybridConfigParser {
             null -> {}
         }
         if (permissions.isEmpty()) {
-            permissions.addAll(defaultPermissionsFor(detected.mode))
+            permissions.addAll(permissionScan.permissions)
         }
         val orientation = AppOrientation.fromKey(root.optString("orientation"))
         val fullscreen = root.optBoolean("fullscreen", false)
@@ -154,7 +164,8 @@ object HybridConfigParser {
             orientation = orientation,
             fullscreen = fullscreen,
             fromExplicitConfig = true,
-            metadataOriginNote = "Configuration loaded from apkconfig.json.",
+            metadataOriginNote = "Configuration loaded from apkconfig.json." +
+                permissionNote(permissionScan),
         )
     }
 
@@ -165,6 +176,7 @@ object HybridConfigParser {
     private fun parsePwaManifest(
         root: JSONObject,
         displayName: String,
+        permissionScan: PermissionInferenceEngine.Result,
     ): ProjectBuildConfig {
         val appName = root.optString("name").trim()
             .ifEmpty { root.optString("short_name").trim() }
@@ -174,9 +186,10 @@ object HybridConfigParser {
             packageName = ProjectBuildConfig.derivePackageName(appName),
             versionName = "1.0",
             versionCode = 1,
-            permissions = defaultPermissionsFor(BuildMode.MODE_FAST_WEB),
+            permissions = permissionScan.permissions,
             orientation = pwaOrientation(root.optString("orientation")),
-            metadataOriginNote = "Metadata inferred from PWA manifest.json.",
+            metadataOriginNote = "Metadata inferred from PWA manifest.json." +
+                permissionNote(permissionScan),
         )
     }
 
@@ -193,6 +206,7 @@ object HybridConfigParser {
     private fun parsePackageJson(
         root: JSONObject,
         displayName: String,
+        permissionScan: PermissionInferenceEngine.Result,
     ): ProjectBuildConfig {
         val rawName = root.optString("name").trim()
         val appName = if (rawName.startsWith("@")) {
@@ -207,8 +221,9 @@ object HybridConfigParser {
             packageName = ProjectBuildConfig.derivePackageName(appName),
             versionName = versionName,
             versionCode = 1,
-            permissions = defaultPermissionsFor(BuildMode.MODE_CLOUD_WEB_OR_HYBRID),
-            metadataOriginNote = "Metadata inferred from package.json.",
+            permissions = permissionScan.permissions,
+            metadataOriginNote = "Metadata inferred from package.json." +
+                permissionNote(permissionScan),
         )
     }
 
@@ -216,7 +231,11 @@ object HybridConfigParser {
     /* pubspec.yaml (minimal flat key parser — no YAML dependency needed)    */
     /* ==================================================================== */
 
-    private fun parsePubspec(raw: String, displayName: String): ProjectBuildConfig? {
+    private fun parsePubspec(
+        raw: String,
+        displayName: String,
+        permissionScan: PermissionInferenceEngine.Result,
+    ): ProjectBuildConfig? {
         val map = HashMap<String, String>()
         for (line in raw.lineSequence()) {
             val trimmed = line.trim()
@@ -246,8 +265,9 @@ object HybridConfigParser {
             packageName = ProjectBuildConfig.derivePackageName(appName),
             versionName = versionName,
             versionCode = versionCode,
-            permissions = defaultPermissionsFor(BuildMode.MODE_CLOUD_FLUTTER),
-            metadataOriginNote = "Metadata inferred from pubspec.yaml.",
+            permissions = permissionScan.permissions,
+            metadataOriginNote = "Metadata inferred from pubspec.yaml." +
+                permissionNote(permissionScan),
         )
     }
 
@@ -307,6 +327,7 @@ object HybridConfigParser {
     private fun filenameFallback(
         detected: DetectedProject,
         displayName: String,
+        permissionScan: PermissionInferenceEngine.Result,
     ): ProjectBuildConfig {
         val appName = displayName.toPrettyAppName()
         return ProjectBuildConfig(
@@ -314,10 +335,22 @@ object HybridConfigParser {
             packageName = ProjectBuildConfig.derivePackageName(appName),
             versionName = "1.0",
             versionCode = 1,
-            permissions = defaultPermissionsFor(detected.mode),
+            permissions = permissionScan.permissions,
             metadataOriginNote = "No config file found — defaults derived from " +
-                "the project name.",
+                "the project name." + permissionNote(permissionScan),
         )
+    }
+
+    /**
+     * Human-readable suffix for [ProjectBuildConfig.metadataOriginNote] listing
+     * what the auto-permission scan enabled (empty when nothing was inferred).
+     */
+    private fun permissionNote(scan: PermissionInferenceEngine.Result): String {
+        if (scan.findings.isEmpty()) return ""
+        return " Auto-detected permissions: " +
+            scan.findings.joinToString(", ") {
+                "${it.permission.substringAfterLast('.')} — ${it.reason.substringBefore(" —")}"
+            } + "."
     }
 
     private fun defaultPermissionsFor(mode: BuildMode): Set<String> = when (mode) {

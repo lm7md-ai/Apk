@@ -129,7 +129,8 @@
     <string name="config_fullscreen">ملء الشاشة / غامر</string>
     <string name="config_fullscreen_sub">إخفاء شريط الحالة وشريط التنقل</string>
     <string name="config_permissions">الأذونات</string>
-    <string name="config_permissions_sub">يُضاف إذن INTERNET دائماً لقشرتي الويب وPython</string>
+    <string name="config_permissions_sub">تُكتشف تلقائياً من الكود — عدّلها كما تشاء</string>
+    <string name="config_permissions_auto">تُكتشف الأذونات تلقائياً من الكود الذي ترفعه وتُفعّل مسبقاً بالأسفل. ويُضاف إذن INTERNET دائماً لقشرتي الويب وPython.</string>
     <string name="config_engine">محرك البناء</string>
     <string name="engine_fast_desc">تغليف فوري على الجهاز: ترقيع القشرة + محاذاة 4 بايت + توقيع V1/V2/V3. لا يحتاج مترجماً.</string>
     <string name="engine_cloud_desc">تعمل أدوات Node/Flutter على منفّذ GitHub Actions مجاني، ويُستكمل الناتج ويُوقَّع على هذا الجهاز.</string>

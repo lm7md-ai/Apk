@@ -46,6 +46,11 @@ Ideas ordered by impact; anything unchecked is open for contribution.
       and the ready AI prompt embeds the repair history.
       *Still open:* sending the prompt to a user-configured AI endpoint
       and offering a patch automatically.
+- [x] **Automatic permissions** — *(v6.2)* `PermissionInferenceEngine` scans
+      the uploaded source (web API signatures, Python imports +
+      `requirements.txt`) and pre-enables exactly the Android permissions the
+      app uses; APK editing keeps the APK's own set; `apkconfig.json` stays
+      authoritative; everything still adjustable on the config screen.
 - [ ] **App library screen** — installed factory-built apps, launch/uninstall,
       version history, diff of configs.
 - [ ] **Profiles** — per-project keystore + icon + permission presets.

@@ -307,7 +307,7 @@ fun ConfigScreen(
                     subtitle = stringResource(R.string.config_permissions_sub),
                 )
                 Text(
-                    text = "INTERNET is always included for web and python shells.",
+                    text = stringResource(R.string.config_permissions_auto),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

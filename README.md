@@ -156,6 +156,32 @@ Every failed build is analyzed by `core-diag/BuildFailureAnalyzer`:
   English log excerpts, full build context) with one-tap *Copy* / *Share* —
   paste it into any AI assistant for a deeper fix.
 
+## Automatic permissions (v6.2)
+
+Nobody should have to guess Android permission checkboxes. When a project
+is uploaded, `PermissionInferenceEngine` (`core/detector`) scans its source
+and enables exactly what that code uses, on top of the shell baseline
+(`INTERNET` + `ACCESS_NETWORK_STATE`):
+
+* **Web / PWA / prebuilt Node bundles** — HTML/JS scanned for browser API
+  signatures: `navigator.geolocation` → precise + approximate location,
+  `getUserMedia` / speech recognition → camera + microphone, web
+  notifications → POST_NOTIFICATIONS, `navigator.vibrate` → vibrate,
+  `navigator.bluetooth` → Bluetooth, wake lock → keep awake.
+* **Python projects** — import statements and `requirements.txt` scanned
+  for hardware-implying modules: `cv2`/`picamera` → camera,
+  `pyaudio`/`sounddevice`/`speech_recognition` → microphone,
+  `bleak`/`bluetooth` → Bluetooth.
+* **APK editing** — the uploaded APK keeps its own permission set
+  untouched (nothing is inferred or dropped).
+
+The detected permissions arrive pre-checked on the configuration screen
+(and the origin note lists what was detected and why); the user can still
+adjust any of them before building. Explicit `permissions` arrays inside
+`apkconfig.json` remain authoritative when present. The scan is bounded
+(≤ 60 files, ≤ 6 MB of text, vendor/test noise skipped) so even large
+zips stay fast.
+
 ## Self-healing builds — auto-repair (v6)
 
 The factory never gives up on the first error. `BuildAutoRepairEngine`
