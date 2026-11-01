@@ -399,11 +399,15 @@ object BuildFailureAnalyzer {
         appendLine("أستخدم تطبيق **Universal APK Factory** على هاتف أندرويد لتحويل " +
             "مشروعي إلى تطبيق APK قابل للتثبيت، وفشل البناء. إليك كل التفاصيل:")
         appendLine()
+        // v6.3 — lead with the classified error type so any assistant (or the
+        // user) grasps the failure class before reading anything else.
+        appendLine("**نوع الخطأ: ${rule.category} — ${rule.title}**")
+        appendLine()
         appendLine("### 1) السياق")
         appendLine("- مسار البناء: **${mode?.displayName ?: "لم يُحدد بعد (فشل مبكر)"}**")
         if (mode != null) appendLine("- وصف المسار: ${mode.summary}")
         appendLine("- المرحلة التي فشل عندها: `$phaseName`")
-        appendLine("- إصدار التطبيق المُصنِّع: 2.0 (arm64-v8a، أندرويد 8.0+)")
+        appendLine("- إصدار التطبيق المُصنِّع: 6.3 (arm64-v8a، أندرويد 8.0+)")
         appendLine()
         appendLine("### 2) رسالة الخطأ الأصلية")
         appendLine("```")

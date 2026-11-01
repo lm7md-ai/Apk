@@ -161,6 +161,11 @@
     <string name="python_advanced_show">خيارات متقدمة: تثبيت بيئة مخصصة</string>
     <string name="python_advanced_hide">إخفاء الخيارات المتقدمة</string>
 
+    <!-- Full build report (v6.3) -->
+    <string name="report_clipboard_label">التقرير الكامل لبناء Universal APK Factory</string>
+    <string name="report_copy_full">نسخ التقرير الكامل</string>
+    <string name="report_share_full">مشاركة</string>
+
     <!-- Auto-repair engine (v6) -->
     <string name="repair_title">الإصلاح التلقائي</string>
     <string name="repair_retrying">تم الإصلاح — إعادة محاولة البناء تلقائياً…</string>

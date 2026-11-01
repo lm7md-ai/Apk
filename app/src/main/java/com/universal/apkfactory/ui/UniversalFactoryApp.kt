@@ -72,9 +72,13 @@ fun UniversalFactoryApp(viewModel: MainViewModel) {
     val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
 
-    LaunchedEffect(state.error) {
+    LaunchedEffect(state.error, state.phase) {
         val message = state.error
-        if (!message.isNullOrBlank()) {
+        // v6.3 — build failures are NOT transient: the Build screen renders
+        // them permanently (error + diagnosis + ready AI prompt). Showing the
+        // snackbar and dismissing here used to make that card disappear after
+        // a few seconds, so we skip the snackbar entirely for FAILED builds.
+        if (!message.isNullOrBlank() && state.phase != MainViewModel.BuildPhase.FAILED) {
             snackbarHostState.showSnackbar(
                 message = message,
                 duration = SnackbarDuration.Long,
@@ -187,6 +191,7 @@ fun UniversalFactoryApp(viewModel: MainViewModel) {
                 onNewBuild = { viewModel.reset() },
                 onBackToConfig = { viewModel.navigate(MainViewModel.Screen.CONFIG) },
                 onCancelNative = { viewModel.cancelNativeBuild() },
+                onRequestFullReport = { viewModel.composeFullReport() },
                 modifier = screenModifier,
             )
 

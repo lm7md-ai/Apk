@@ -59,6 +59,11 @@ object BuildAutoRepairEngine {
         val dropIcon: Boolean = false,
         /** Pause before the retry (transient-network backoff). */
         val retryDelayMs: Long = 0L,
+        /**
+         * Clear the temporary build/cache directories before retrying
+         * (out-of-space and transient-IO repairs).
+         */
+        val cleanupBuildCache: Boolean = false,
         val events: List<RepairEvent> = emptyList(),
     )
 
@@ -236,6 +241,41 @@ object BuildAutoRepairEngine {
             )
         }
 
+        // ---- rule 4 (v6.3): out of storage → clean temp files, retry ------
+        if (DISK_SPACE_REGEX.containsMatchIn(hay)) {
+            return RepairPlan(
+                project = project,
+                config = config,
+                retryDelayMs = 1_500L,
+                cleanupBuildCache = true,
+                events = listOf(
+                    RepairEvent(
+                        problem = "The device ran out of storage during the build",
+                        action = "cleared temporary build files and retrying",
+                    )
+                ),
+            )
+        }
+
+        // ---- rule 5 (v6.3): transient file-system error → one cleanup retry
+        // A bare IOException on the first attempt (temp files, memory
+        // pressure, concurrent scans) is usually worth exactly one retry
+        // after cleaning; deterministic failures still surface normally.
+        if (error is java.io.IOException && attempt == 1) {
+            return RepairPlan(
+                project = project,
+                config = config,
+                retryDelayMs = 1_000L,
+                cleanupBuildCache = true,
+                events = listOf(
+                    RepairEvent(
+                        problem = "A transient file-system error interrupted the build",
+                        action = "cleaned temporary files and retrying once",
+                    )
+                ),
+            )
+        }
+
         return null
     }
 
@@ -337,6 +377,13 @@ object BuildAutoRepairEngine {
     private val NESTED_APK_REGEX = Regex(
         "not an installable APK|ZipException|malformed|corrupt|no entries|" +
             "empty (archive|zip|payload)|not a zip|unexpected end",
+        RegexOption.IGNORE_CASE,
+    )
+
+    /** Out-of-storage signatures. */
+    private val DISK_SPACE_REGEX = Regex(
+        "no space left on device|ENOSPC|insufficient space|failed to allocate|" +
+            "not enough space",
         RegexOption.IGNORE_CASE,
     )
 

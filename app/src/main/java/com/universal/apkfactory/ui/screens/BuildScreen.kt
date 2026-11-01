@@ -87,6 +87,7 @@ fun BuildScreen(
     onNewBuild: () -> Unit,
     onBackToConfig: () -> Unit,
     onCancelNative: () -> Unit,
+    onRequestFullReport: () -> String,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -115,36 +116,120 @@ fun BuildScreen(
             )
         }
 
+        // v6.3 — the failure surface (buttons + error + diagnosis + ready AI
+        // prompt + full-report export) renders ABOVE the terminal log: it used
+        // to sit below the ever-growing log and get pushed out of sight, so
+        // the prompt "appeared for a moment then disappeared".
+        if (state.phase == MainViewModel.BuildPhase.FAILED) {
+            FailedPanel(
+                state = state,
+                onBackToConfig = onBackToConfig,
+                onNewBuild = onNewBuild,
+                onRequestFullReport = onRequestFullReport,
+            )
+        }
+
         TerminalCard(lines = state.logs)
 
         state.resultApk?.let { apk ->
             ResultPanel(apk = apk, onInstall = onInstall, onShare = onShare)
         }
 
-        if (state.phase == MainViewModel.BuildPhase.FAILED) {
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                OutlinedButton(onClick = onBackToConfig) {
-                    Text(stringResource(R.string.build_adjust))
-                }
-                OutlinedButton(onClick = onNewBuild) {
-                    Text(stringResource(R.string.build_restart))
-                }
-            }
-            state.error?.let { message ->
-                Text(
-                    text = message,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.error,
-                )
-            }
+        Spacer(modifier = Modifier.height(24.dp))
+    }
+}
 
-            // Smart failure diagnosis + ready-to-send AI prompt.
-            state.diagnosis?.let { diagnosis ->
-                FailureDiagnosisCard(diagnosis = diagnosis)
+/* ---------------------------------------------------------------------- */
+/* Failed panel (v6.3) — sticky, always above the terminal log            */
+/* ---------------------------------------------------------------------- */
+
+/**
+ * Everything the user needs when a build finally failed: the adjust/restart
+ * actions, the full-report export (copy / share — the report bundles the
+ * complete uncapped log, config, repairs, diagnosis and the ready AI
+ * prompt), the raw error and the smart diagnosis card itself.
+ */
+@Composable
+private fun FailedPanel(
+    state: MainViewModel.UiState,
+    onBackToConfig: () -> Unit,
+    onNewBuild: () -> Unit,
+    onRequestFullReport: () -> String,
+) {
+    val context = LocalContext.current
+    var reportCopied by androidx.compose.runtime.remember {
+        androidx.compose.runtime.mutableStateOf(false)
+    }
+    val reportLabel = stringResource(R.string.report_clipboard_label)
+
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            OutlinedButton(onClick = onBackToConfig) {
+                Text(stringResource(R.string.build_adjust))
+            }
+            OutlinedButton(onClick = onNewBuild) {
+                Text(stringResource(R.string.build_restart))
             }
         }
 
-        Spacer(modifier = Modifier.height(24.dp))
+        // v6.3 — full log of everything: one tap to copy, one to share.
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            TextButton(
+                onClick = {
+                    val clipboard = context.getSystemService(
+                        android.content.ClipboardManager::class.java
+                    )
+                    clipboard?.setPrimaryClip(
+                        android.content.ClipData.newPlainText(reportLabel, onRequestFullReport())
+                    )
+                    reportCopied = true
+                },
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.ContentCopy,
+                    contentDescription = null,
+                    modifier = Modifier.size(14.dp),
+                )
+                Text(
+                    "  " + stringResource(
+                        if (reportCopied) R.string.action_copied else R.string.report_copy_full
+                    )
+                )
+            }
+            TextButton(
+                onClick = {
+                    val intent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                        type = "text/plain"
+                        putExtra(
+                            android.content.Intent.EXTRA_SUBJECT,
+                            "Universal APK Factory — build report",
+                        )
+                        putExtra(android.content.Intent.EXTRA_TEXT, onRequestFullReport())
+                    }
+                    context.startActivity(android.content.Intent.createChooser(intent, null))
+                },
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Share,
+                    contentDescription = null,
+                    modifier = Modifier.size(14.dp),
+                )
+                Text("  " + stringResource(R.string.report_share_full))
+            }
+        }
+
+        state.error?.let { message ->
+            Text(
+                text = message,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error,
+            )
+        }
+
+        // Smart failure diagnosis + ready-to-send AI prompt.
+        state.diagnosis?.let { diagnosis ->
+            FailureDiagnosisCard(diagnosis = diagnosis)
+        }
     }
 }
 

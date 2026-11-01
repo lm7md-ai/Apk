@@ -161,6 +161,11 @@
     <string name="python_advanced_show">Advanced: install a custom runtime</string>
     <string name="python_advanced_hide">Hide advanced options</string>
 
+    <!-- Full build report (v6.3) -->
+    <string name="report_clipboard_label">Universal APK Factory full build report</string>
+    <string name="report_copy_full">Copy full report</string>
+    <string name="report_share_full">Share</string>
+
     <!-- Auto-repair engine (v6) -->
     <string name="repair_title">Auto-repair</string>
     <string name="repair_retrying">Fixed — retrying the build automatically …</string>

@@ -36,6 +36,8 @@ import com.universal.apkfactory.engine.gradle.NativeGradleService
 import com.universal.apkfactory.engine.gradle.ToolchainManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import java.text.SimpleDateFormat
+import java.util.Date
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -134,6 +136,19 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private var buildJob: Job? = null
     private var finalizeNativeJob: Job? = null
 
+    /**
+     * v6.3 — uncapped log of EVERYTHING (the rendered [UiState.logs] list is
+     * capped at [MAX_LOG_LINES] entries). Feeds the full build report
+     * (copy / share) and the persisted `last-build-report.txt`.
+     */
+    private val fullLog = StringBuilder()
+
+    /** Guards [fullLog] (appended from IO coroutines and the main thread). */
+    private val fullLogLock = Any()
+
+    private val logTimeFormat = SimpleDateFormat("HH:mm:ss", java.util.Locale.US)
+    private val historyTimeFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.US)
+
     /** On-device Gradle builds need roughly 3 GiB of free internal storage. */
     private val minNativeFreeBytes: Long = 3L * 1024 * 1024 * 1024
 
@@ -194,6 +209,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
             else -> BuildLogLine.Level.INFO
         }
+        synchronized(fullLogLock) {
+            fullLog.append("[${logTimeFormat.format(Date())}] [${level.name}] $message\n")
+        }
         _state.update { current ->
             val logs = current.logs + BuildLogLine(level = level, message = message)
             current.copy(logs = if (logs.size > MAX_LOG_LINES) {
@@ -246,6 +264,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun ingestUri(uri: Uri, origin: IngestionOrigin) {
         if (_state.value.busy) return
         buildJob = viewModelScope.launch {
+            clearFullLog()
             _state.update {
                 it.copy(
                     busy = true,
@@ -281,6 +300,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun ingestFolder(treeUri: Uri) {
         if (_state.value.busy) return
         buildJob = viewModelScope.launch {
+            clearFullLog()
             _state.update {
                 it.copy(
                     busy = true,
@@ -319,6 +339,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val trimmed = url.trim()
         if (trimmed.isEmpty() || _state.value.busy) return
         buildJob = viewModelScope.launch {
+            clearFullLog()
             _state.update {
                 it.copy(
                     busy = true,
@@ -474,6 +495,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             failBuild(error)
             return null
         }
+        if (plan.cleanupBuildCache) {
+            appendLog("🔧 auto-repair: clearing temporary build files …")
+            withContext(Dispatchers.IO) {
+                runCatching {
+                    IngestionManager.Workspace.build(graph.appContext).deleteRecursively()
+                    IngestionManager.Workspace.temp(graph.appContext).deleteRecursively()
+                    File(graph.appContext.cacheDir, "auto-repair").deleteRecursively()
+                }
+            }
+        }
         if (plan.retryDelayMs > 0) delay(plan.retryDelayMs)
         plan.events.forEach { event ->
             appendLog("🔧 auto-repair (attempt $attempt failed): $event")
@@ -498,6 +529,95 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 error = error.message,
                 diagnosis = failureDiagnosisOf(error),
             )
+        }
+        appendLog(
+            "📋 Full report saved to files/last-build-report.txt — use " +
+                "'Copy full report' / 'Share' below."
+        )
+        persistBuildRecord("FAILED: ${error.message?.take(140) ?: "unknown error"}")
+    }
+
+    /** v6.3 — resets the uncapped log buffer (new ingestion / new build). */
+    private fun clearFullLog() {
+        synchronized(fullLogLock) { fullLog.setLength(0) }
+    }
+
+    /**
+     * v6.3 — the complete record of everything that happened: outcome, project
+     * and config, every auto-repair, the full diagnosis + ready AI prompt and
+     * the UNCAPPED terminal log (the on-screen viewer only keeps the last
+     * [MAX_LOG_LINES] lines). Powers the on-screen copy / share buttons.
+     */
+    fun composeFullReport(): String {
+        val s = _state.value
+        return buildString {
+            appendLine("═══════════════════════════════════════════════════════════")
+            appendLine(" Universal APK Factory v6.3 — FULL BUILD REPORT")
+            appendLine(" ${historyTimeFormat.format(Date())}")
+            appendLine("═══════════════════════════════════════════════════════════")
+            appendLine()
+            appendLine("── Outcome ──")
+            appendLine("Phase : ${s.phase}")
+            appendLine("Error : ${s.error ?: "none"}")
+            appendLine()
+            appendLine("── Project ──")
+            appendLine("Source: ${s.project?.source?.displayName ?: "none"}")
+            appendLine("Mode  : ${s.project?.mode ?: "n/a"}")
+            s.config?.let { c ->
+                appendLine("App   : ${c.appName}")
+                appendLine("Id    : ${c.packageName}")
+                appendLine("Ver   : ${c.versionName} (${c.versionCode})")
+                appendLine("Perms : ${c.permissions.sorted().joinToString(", ")}")
+                appendLine("Orient: ${c.orientation} | fullscreen=${c.fullscreen}")
+                c.metadataOriginNote?.let { appendLine("Origin: $it") }
+            }
+            appendLine()
+            appendLine("── Auto-repairs applied (${s.repairEvents.size}) ──")
+            if (s.repairEvents.isEmpty()) appendLine("(none)") else
+                s.repairEvents.forEach { appendLine("• $it") }
+            appendLine()
+            s.diagnosis?.let { d ->
+                appendLine("── Diagnosis ──")
+                appendLine("Type  : ${d.category}")
+                appendLine("Title : ${d.title}")
+                appendLine("Cause : ${d.probableCause}")
+                appendLine("Fix   :")
+                d.fixSteps.forEach { appendLine("  • $it") }
+                d.runUrl?.let { appendLine("Run   : $it") }
+                appendLine()
+                appendLine("── Ready AI prompt ──")
+                appendLine(d.aiPrompt)
+                appendLine()
+            }
+            appendLine("── Full terminal log (uncapped) ──")
+            val log = synchronized(fullLogLock) { fullLog.toString() }
+            append(if (log.isBlank()) "(empty)\n" else log)
+            appendLine()
+            appendLine("══════════════════ end of report ══════════════════")
+        }
+    }
+
+    /**
+     * v6.3 — nothing is ever lost: every finished build (success or failure)
+     * writes `files/last-build-report.txt` (the full report) and appends a
+     * one-line summary to `files/build-history.log`.
+     */
+    private fun persistBuildRecord(outcome: String) {
+        val report = composeFullReport()
+        val mode = _state.value.project?.mode?.toString() ?: "n/a"
+        val config = _state.value.config
+        val line = "${historyTimeFormat.format(Date())} | $mode | " +
+            "${config?.packageName ?: "?"} ${config?.versionName ?: "?"} " +
+            "(${config?.versionCode ?: "?"}) | $outcome\n"
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                File(graph.appContext.filesDir, "last-build-report.txt")
+                    .writeText(report)
+                File(graph.appContext.filesDir, "build-history.log")
+                    .appendText(line)
+            } catch (_: Exception) {
+                // Reporting must never break the app.
+            }
         }
     }
 
@@ -597,7 +717,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun dismissError() {
-        _state.update { it.copy(error = null, diagnosis = null) }
+        // v6.3 — never wipe the failure surface (error + diagnosis + ready AI
+        // prompt) while the build is FAILED. The global snackbar used to call
+        // this right after a build failure, making the prompt card appear for
+        // a few seconds and then vanish. Transient errors on other phases
+        // still dismiss normally.
+        _state.update {
+            if (it.phase == BuildPhase.FAILED) it else it.copy(error = null, diagnosis = null)
+        }
     }
 
     /* ================================================================== */
@@ -609,6 +736,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val rawProject = _state.value.project ?: return
         val rawConfig = _state.value.config ?: return
         if (_state.value.busy || _state.value.phase == BuildPhase.NATIVE_BUILDING) return
+        clearFullLog()
 
         // v6 — pre-flight auto-repair: fix what is fixable (invalid package
         // id, broken version fields, missing entry files) before the first
@@ -679,6 +807,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     _state.update {
                         it.copy(phase = BuildPhase.DONE, busy = false, resultApk = apk)
                     }
+                    persistBuildRecord("SUCCESS: ${apk.name} (${apk.length()} bytes)")
                     return@launch
                 } catch (error: Exception) {
                     val repaired = repairOrFail(error, attempt) ?: return@launch
@@ -735,6 +864,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     _state.update {
                         it.copy(phase = BuildPhase.DONE, busy = false, resultApk = apk)
                     }
+                    persistBuildRecord("SUCCESS: ${apk.name} (${apk.length()} bytes)")
                     return@launch
                 } catch (error: Exception) {
                     val repaired = repairOrFail(error, attempt) ?: return@launch

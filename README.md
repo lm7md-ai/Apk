@@ -156,6 +156,24 @@ Every failed build is analyzed by `core-diag/BuildFailureAnalyzer`:
   English log excerpts, full build context) with one-tap *Copy* / *Share* —
   paste it into any AI assistant for a deeper fix.
 
+## Full build report — a log of everything (v6.3)
+
+Nothing is ever lost again:
+
+* The **terminal log is kept uncapped** in parallel to the (render-limited)
+  on-screen viewer.
+* On the failure screen, **Copy full report / Share** export the complete
+  record: outcome, project + configuration (name, id, version, permissions),
+  every auto-repair applied, the classified diagnosis (type, cause, fix
+  steps), the ready AI prompt and the full timestamped log.
+* Every finished build — success or failure — automatically writes
+  `files/last-build-report.txt` and appends a one-line summary to
+  `files/build-history.log`.
+* The failure surface (error + diagnosis + prompt + export buttons) is
+  **sticky and always rendered above the terminal log**; the global error
+  snackbar no longer dismisses it after a few seconds (the bug that made
+  the prompt "appear then disappear").
+
 ## Automatic permissions (v6.2)
 
 Nobody should have to guess Android permission checkboxes. When a project

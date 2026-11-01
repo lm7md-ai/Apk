@@ -37,13 +37,15 @@ Ideas ordered by impact; anything unchecked is open for contribution.
 
 ## Platform & UX
 
-- [x] **AI-assisted auto-repair** — *(v6 delivered the self-healing core)*
-      `BuildAutoRepairEngine` runs pre-flight fixes (invalid package id,
-      broken version fields, missing web/Python entry files) and, on failure,
-      applies repair rules (drop a broken icon, unwrap an APK nested inside
-      a zip, backoff-retry transient network errors) and automatically
-      retries up to 3 attempts; the failure surface shows what was fixed
-      and the ready AI prompt embeds the repair history.
+- [x] **AI-assisted auto-repair** — *(v6 delivered the self-healing core; v6.3
+      extended it)* `BuildAutoRepairEngine` runs pre-flight fixes (invalid
+      package id, broken version fields, missing web/Python entry files) and,
+      on failure, applies repair rules and retries automatically up to 3
+      attempts: drop a broken icon, unwrap an APK nested inside a zip,
+      backoff-retry transient network errors, **out-of-storage → clear temp
+      files and retry, transient IOException → one cleanup retry (v6.3)**.
+      The failure surface shows what was fixed and the ready AI prompt embeds
+      the repair history and leads with the classified error type.
       *Still open:* sending the prompt to a user-configured AI endpoint
       and offering a patch automatically.
 - [x] **Automatic permissions** — *(v6.2)* `PermissionInferenceEngine` scans
