@@ -306,16 +306,20 @@ object HybridConfigParser {
                 )
             }
         } catch (error: Exception) {
-            filenameFallback(
-                DetectedProject(
-                    source = com.universal.apkfactory.core.model.IngestedSource.ApkFile(
-                        apkFile,
-                        com.universal.apkfactory.core.model.IngestionOrigin.UNKNOWN
-                    ),
-                    mode = BuildMode.MODE_APK_EDITOR,
-                    evidence = emptyList(),
+            val synthetic = DetectedProject(
+                source = com.universal.apkfactory.core.model.IngestedSource.ApkFile(
+                    apkFile,
+                    com.universal.apkfactory.core.model.IngestionOrigin.UNKNOWN
                 ),
+                mode = BuildMode.MODE_APK_EDITOR,
+                evidence = emptyList(),
+            )
+            // MODE_APK_EDITOR infers nothing (the APK's own permission set is
+            // authoritative) — this yields the plain INTERNET baseline.
+            filenameFallback(
+                synthetic,
                 displayName,
+                PermissionInferenceEngine.infer(synthetic) { null },
             )
         }
     }
