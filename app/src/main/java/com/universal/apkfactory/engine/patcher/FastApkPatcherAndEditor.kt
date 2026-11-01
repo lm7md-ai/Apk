@@ -403,7 +403,16 @@ class FastApkPatcherAndEditor(
                         newPackage + authority.removePrefix(previousPackage)
 
                     authority.contains(previousPackage) ->
-                        authority.replace(previousPackage, newPackage)
+                        // v6.3.1 — word-boundary replace: a plain contains()
+                        // could mangle longer tokens that merely contain the
+                        // old package id as a substring.
+                        authority.replace(
+                            Regex(
+                                "(?<![A-Za-z0-9_])" + Regex.escape(previousPackage) +
+                                    "(?![A-Za-z0-9_])"
+                            ),
+                            newPackage,
+                        )
 
                     else -> "$newPackage.$authority"
                 }
@@ -761,7 +770,7 @@ class FastApkPatcherAndEditor(
             put("orientation", config.orientation.name.lowercase())
             put("fullscreen", config.fullscreen)
             put("builtAt", System.currentTimeMillis())
-            put("factoryVersion", "2.0")
+            put("factoryVersion", "6.3")
             when (target.kind) {
                 ShellKind.WEBVIEW -> {
                     // webRoot "" → www/index.html; webRoot "dist" → www/dist/index.html

@@ -77,6 +77,9 @@ object ZipRootNormalizer {
         val segments = entryName.split('/')
         for (segment in segments) {
             when (segment) {
+                // v6.3.1 — Zip-Slip guard: path traversal (`..`) and empty
+                // segments (`a//b`) never name a legitimate payload file.
+                "..", "" -> return true
                 "__MACOSX", ".git", ".idea", ".gradle", ".settings",
                 "__pycache__", "node_modules", ".dart_tool", ".terraform",
                 ".svn", ".hg" -> return true

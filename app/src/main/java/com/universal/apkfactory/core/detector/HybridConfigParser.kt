@@ -149,7 +149,10 @@ object HybridConfigParser {
 
             null -> {}
         }
-        if (permissions.isEmpty()) {
+        // v6.3.1 — the note must only claim auto-detected permissions when
+        // they were actually applied; an explicit apkconfig list is authoritative.
+        val usedAutoPermissions = permissions.isEmpty()
+        if (usedAutoPermissions) {
             permissions.addAll(permissionScan.permissions)
         }
         val orientation = AppOrientation.fromKey(root.optString("orientation"))
@@ -165,7 +168,7 @@ object HybridConfigParser {
             fullscreen = fullscreen,
             fromExplicitConfig = true,
             metadataOriginNote = "Configuration loaded from apkconfig.json." +
-                permissionNote(permissionScan),
+                if (usedAutoPermissions) permissionNote(permissionScan) else "",
         )
     }
 

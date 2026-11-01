@@ -291,6 +291,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     )
                 }
                 appendLog("ERROR: ${error.message}")
+                persistBuildRecord(
+                    "INGEST FAILED: ${error.message?.take(140) ?: "unknown error"}"
+                )
             } finally {
                 _state.update { it.copy(busy = false, busyMessage = null) }
             }
@@ -329,6 +332,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     )
                 }
                 appendLog("ERROR: ${error.message}")
+                persistBuildRecord(
+                    "INGEST FAILED: ${error.message?.take(140) ?: "unknown error"}"
+                )
             } finally {
                 _state.update { it.copy(busy = false, busyMessage = null) }
             }
@@ -369,6 +375,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     )
                 }
                 appendLog("ERROR: ${error.message}")
+                persistBuildRecord(
+                    "INGEST FAILED: ${error.message?.take(140) ?: "unknown error"}"
+                )
             } finally {
                 _state.update { it.copy(busy = false, busyMessage = null) }
             }
@@ -431,6 +440,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         it.copy(iconFileName = uri.lastPathSegment ?: "custom icon")
                     }
                     appendLog("Launcher icon replaced (${decoded.width}x${decoded.height})")
+                } else {
+                    // v6.3.1 — was silently ignored, leaving the user without
+                    // any feedback that their icon was not applied.
+                    _state.update {
+                        it.copy(error = "Could not decode the selected icon — keeping the previous one.")
+                    }
                 }
             }
         }.onFailure { error ->
@@ -450,10 +465,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _state.update { it.copy(nativeOnDevice = onDevice) }
     }
 
-    /**
-     * Builds the diagnosis for the failure that just occurred, from the
-     * current mode, phase, error and captured terminal log.
-     */
     /**
      * v6 auto-repair decision point after a failed build attempt.
      *
@@ -537,9 +548,29 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         persistBuildRecord("FAILED: ${error.message?.take(140) ?: "unknown error"}")
     }
 
-    /** v6.3 — resets the uncapped log buffer (new ingestion / new build). */
+    /** v6.3 — resets the uncapped log buffer (new ingestion). */
     private fun clearFullLog() {
         synchronized(fullLogLock) { fullLog.setLength(0) }
+    }
+
+    /**
+     * v6.3.1 — the full report must contain EVERYTHING (import → detection →
+     * every build attempt), so the buffer is never wiped between builds of
+     * the same project: a separator marks each new build and the buffer is
+     * trimmed from the top once it grows past [FULL_LOG_TRIM_BYTES].
+     */
+    private fun markNewBuildInFullLog() {
+        synchronized(fullLogLock) {
+            if (fullLog.isNotEmpty()) {
+                fullLog.append("\n════════ NEW BUILD — ${historyTimeFormat.format(Date())} ════════\n\n")
+            }
+            if (fullLog.length > FULL_LOG_TRIM_BYTES) {
+                val kept = fullLog.substring(fullLog.length - FULL_LOG_TRIM_BYTES / 2)
+                val cut = kept.indexOf('\n').coerceAtLeast(0)
+                fullLog.setLength(0)
+                fullLog.append("… older log lines trimmed …\n").append(kept.substring(cut))
+            }
+        }
     }
 
     /**
@@ -736,7 +767,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val rawProject = _state.value.project ?: return
         val rawConfig = _state.value.config ?: return
         if (_state.value.busy || _state.value.phase == BuildPhase.NATIVE_BUILDING) return
-        clearFullLog()
+        markNewBuildInFullLog()
 
         // v6 — pre-flight auto-repair: fix what is fixable (invalid package
         // id, broken version fields, missing entry files) before the first
@@ -943,6 +974,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 _state.update {
                     it.copy(phase = BuildPhase.DONE, busy = false, resultApk = signed)
                 }
+                persistBuildRecord("SUCCESS (native): ${signed.name} (${signed.length()} bytes)")
             } catch (error: Exception) {
                 appendLog("ERROR: ${error.message}")
                 _state.update {
@@ -1001,6 +1033,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             )
         }
         refreshToolchainReady()
+        // v6.3.1 — the fresh UiState dropped the runtime probe result, which
+        // made the Home screen's Python card show a stale "not provisioned".
+        refreshPythonRuntime()
     }
 
     /* ================================================================== */
@@ -1159,5 +1194,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     companion object {
         private const val MAX_LOG_LINES = 4000
+        private const val FULL_LOG_TRIM_BYTES = 512 * 1024
     }
 }

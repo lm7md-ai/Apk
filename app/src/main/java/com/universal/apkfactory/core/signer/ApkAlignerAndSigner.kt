@@ -205,7 +205,7 @@ class ApkAlignerAndSigner(private val context: Context) {
                 .setV2SigningEnabled(true)
                 .setV3SigningEnabled(true)
                 .setMinSdkVersion(MIN_SDK)
-                .setCreatedBy("Universal APK Factory 2.0")
+                .setCreatedBy("Universal APK Factory 6.3")
                 .build()
             signer.sign()
         } catch (error: Exception) {

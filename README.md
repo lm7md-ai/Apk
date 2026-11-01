@@ -2,6 +2,28 @@
 
 **A universal mobile build system and APK studio for Android.** 100% Kotlin + Jetpack Compose (Material 3), `arm64-v8a`, `minSdk 26`, `targetSdk 35`.
 
+## Line-by-line audit (v6.3.1)
+
+A full audit of the pipeline (patcher, signer, orchestrator, view model,
+detector, ingestion, repair engine) fixed eleven findings, the most notable:
+
+* **Zip-Slip hardening** — archive entries containing `..` (or empty path
+  segments) are now rejected everywhere, and the cloud/native extraction
+  path additionally enforces canonical-path containment. A malicious zip
+  can no longer write outside the workspace.
+* **Cloud web start path** — the shell config no longer inherits the source
+  repo's detected `webEntryFile`; the cloud artifact always ships a plain
+  `index.html`, and the generated app now opens the right page.
+* **The full report now truly covers everything** — import and detection
+  logs are kept (a separator marks each new build, the buffer trims from
+  the top past 512 KiB), ingestion failures are persisted too, and native
+  successes are recorded in the history.
+* `reset()` re-probes the Python runtime (the Home card no longer shows a
+  stale "not provisioned"), icon decode failures now surface a message,
+  the apkconfig note only claims auto-detected permissions when they were
+  actually applied, provider-authority rewrites use word boundaries, and
+  stale "2.0" version strings were refreshed.
+
 Turn any of these inputs into a signed, installable `.apk` — entirely on-device:
 
 | Input | Channel |

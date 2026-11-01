@@ -167,8 +167,13 @@ class BuildOrchestrator(
                 val unaligned = File(buildDir, "cloud-web-${System.currentTimeMillis()}.apk")
                 // The artifact root already contains index.html; make the
                 // patcher treat the payload root as the web root.
+                // v6.3.1 — the cloud artifact always ships index.html at its
+                // root; drop any web root/entry detected in the *source* repo
+                // so the shell does not look for e.g. "dist/home.html" inside
+                // a bundle that actually contains a plain "index.html".
                 val detectedForShell = detected.copy(
                     webRootDir = null,
+                    webEntryFile = null,
                     hasPrebuiltWebBundle = true,
                 )
                 val payload = IngestedSource.Folder(
@@ -263,6 +268,13 @@ class BuildOrchestrator(
                             continue
                         }
                         val target = File(dir, name)
+                        // v6.3.1 — Zip-Slip guard (belt & braces): every
+                        // extracted path must stay inside the destination.
+                        if (!target.canonicalPath.startsWith(
+                                dir.canonicalPath + File.separator)
+                        ) {
+                            continue
+                        }
                         target.parentFile?.mkdirs()
                         zip.getInputStream(entry).use { input ->
                             target.outputStream().use { output ->

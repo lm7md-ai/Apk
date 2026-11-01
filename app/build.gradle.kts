@@ -29,8 +29,8 @@ android {
         applicationId = "com.universal.apkfactory"
         minSdk = 26
         targetSdk = 35
-        versionCode = 9
-        versionName = "6.3.0"
+        versionCode = 10
+        versionName = "6.3.1"
 
         // This factory targets arm64-v8a devices only (the on-device native
         // toolchain — OpenJDK aarch64, aapt2-arm64 — is 64-bit ARM).
